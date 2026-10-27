@@ -13,7 +13,18 @@ W <- read.csv("data/species_winner.csv", stringsAsFactors = FALSE)
 W$u <- gsub(" ", "_", W$species)
 
 tr <- read.tree(TREE)
-keep <- intersect(W$u, tr$tip.label)
+# our-name -> tip label: direct match, else mammal synonym map
+syn <- if (file.exists("data/mammal_syn_map.csv"))
+       read.csv("data/mammal_syn_map.csv") else data.frame()
+syn_map <- if (nrow(syn)) setNames(syn$tip, syn$species) else
+           setNames(character(), character())
+our_tip <- W$u
+missing <- !(our_tip %in% tr$tip.label)
+our_tip[missing] <- syn_map[W$species[missing]]
+ok <- !is.na(our_tip) & our_tip %in% tr$tip.label
+tip_our <- data.frame(tip = our_tip[ok], our = W$species[ok])
+
+keep <- intersect(our_tip[ok], tr$tip.label)
 cat("matched on v6 tree:", length(keep), "\n")
 
 tr <- keep.tip(tr, keep)
@@ -24,7 +35,11 @@ out <- data.frame(
   item2 = colnames(d)[idx[, 2]],
   phylo_distance = d[idx],
   source = "v6_dated")
-out$item1 <- gsub("_", " ", out$item1)
-out$item2 <- gsub("_", " ", out$item2)
+# tip labels -> our GBIF names (merge expands split-species sharing a tip)
+m <- merge(out, tip_our, by.x = "item1", by.y = "tip")
+m <- merge(m, tip_our, by.x = "item2", by.y = "tip")
+out <- data.frame(item1 = m$our.x, item2 = m$our.y,
+                  phylo_distance = m$phylo_distance, source = m$source)
+out <- out[!duplicated(out[c("item1", "item2")]), ]
 write.csv(out, "data/phy_dist.csv", row.names = FALSE)
 cat("pairs:", nrow(out), "median d:", median(out$phylo_distance), "\n")

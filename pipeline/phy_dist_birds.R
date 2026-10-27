@@ -49,11 +49,15 @@ out <- data.frame(
   item2 = colnames(d)[idx[, 2]],
   phylo_distance = d[idx],
   source = "birdtree_ericson")
-# tip labels -> our GBIF names for uniform downstream joins
-tip2our <- setNames(names(our_tip), unname(our_tip))
-out$item1 <- tip2our[out$item1]
-out$item2 <- tip2our[out$item2]
-out <- out[!is.na(out$item1) & !is.na(out$item2), ]
+# tip labels -> our GBIF names for uniform downstream joins.
+# merge (not direct index): several of our names may share one tip
+# (split species lumped on the tree) -> emit a row per our-name combo.
+tip_our <- data.frame(tip = unname(our_tip), our = names(our_tip))
+m <- merge(out, tip_our, by.x = "item1", by.y = "tip")
+m <- merge(m, tip_our, by.x = "item2", by.y = "tip")
+out <- data.frame(item1 = m$our.x, item2 = m$our.y,
+                  phylo_distance = m$phylo_distance, source = m$source)
+out <- out[!duplicated(out[c("item1", "item2")]), ]
 
 old <- if (file.exists("data/phy_dist.csv"))
        read.csv("data/phy_dist.csv") else data.frame()
