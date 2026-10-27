@@ -124,12 +124,21 @@ def facts(data_dir: Path | str) -> dict:
     return facts
 
 
+def _client_or_none() -> MetaClient | None:
+    try:
+        return MetaClient()
+    except KeyError:
+        return None
+
+
 def briefing(client: MetaClient | None = None,
              data_dir: Path | str = "data/serve",
              model: str = MODEL_SHOWCASE) -> dict:
-    client = client or MetaClient()
+    client = client or _client_or_none()
     data = Path(os.environ.get("DATA_DIR", data_dir))
     f = facts(data)
+    if client is None:
+        return {"facts": f, "brief": None, "note": "MODEL_API_KEY unset"}
 
     r = client.chat(
         model=model,
