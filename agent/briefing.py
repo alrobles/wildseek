@@ -70,6 +70,14 @@ def briefing(client: MetaClient | None = None,
             f"""select name, states, round(risk,3) risk, n_det
                 from '{r}' order by risk desc limit 8""").fetchall()
 
+    s = data / "susceptibility.parquet"
+    if s.exists():
+        facts["n_known_hosts"] = con.execute(
+            f"select count(*) from '{s}' where label=1").fetchone()[0]
+        facts["top_susceptible_unlabeled"] = con.execute(
+            f"""select species, round(p_host,3) p from '{s}'
+                where label=0 order by p_host desc limit 8""").fetchall()
+
     dec = data / "decisions_all.jsonl"
     if dec.exists():
         decs = [json.loads(l) for l in dec.read_text().splitlines()]
