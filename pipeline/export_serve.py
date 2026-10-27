@@ -69,6 +69,22 @@ def main(src: str, dst: str) -> None:
                   "geometry": {"type": "Point",
                                "coordinates": [r[0], r[1]]}}
                  for r in rows]
+        mam = Path(src) / "aphis_mammals_species.parquet"
+        if mam.exists():
+            mrows = con.execute(
+                f"""select lon, lat, state, county, "Species" as bird_species,
+                           "HPAI_Strain" as hpai_strain,
+                           "Date_Detected" as date_detected
+                    from '{mam}' where lat is not null"""
+            ).fetchall()
+            feats += [{"type": "Feature",
+                       "properties": {"state": r[2], "county": r[3],
+                                      "species": r[4], "strain": r[5],
+                                      "date": str(r[6]),
+                                      "year": int(str(r[6])[:4]) if r[6] else None},
+                       "geometry": {"type": "Point",
+                                    "coordinates": [r[0], r[1]]}}
+                      for r in mrows]
         (d / "detections.geojson").write_text(json.dumps(
             {"type": "FeatureCollection", "features": feats}))
         meta["n_detections"] = len(feats)
