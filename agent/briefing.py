@@ -45,12 +45,10 @@ a bare symbol like "****"). Facts:
 {facts}"""
 
 
-def briefing(client: MetaClient | None = None,
-             data_dir: Path | str = "data/serve",
-             model: str = MODEL_SHOWCASE) -> dict:
+def facts(data_dir: Path | str) -> dict:
+    """Facts for the briefing prompt (no network; safe to unit-test)."""
     import duckdb
 
-    client = client or MetaClient()
     data = Path(os.environ.get("DATA_DIR", data_dir))
     con = duckdb.connect()
     facts: dict = {}
@@ -86,12 +84,57 @@ def briefing(client: MetaClient | None = None,
         flagged = [d["species"] for d in decs
                    if d["decision"] != "accept"][:10]
         facts["flagged_species"] = flagged
+
+    # Ambiguous-tail verdicts (decide_tail): the agentic delta. T1 is
+    # ~all accept, so without this the briefing honestly reports nothing.
+    tail = data / "decisions_tail.jsonl"
+    if tail.exists():
+        try:
+            tds = [json.loads(l) for l in tail.read_text().splitlines()
+                   if l.strip()]
+            from collections import Counter
+            facts["tail_decisions"] = dict(
+                Counter(d.get("decision") for d in tds))
+            tflag = [f"{d.get('species')}: {d.get('why', '')[:120]}"
+                     for d in tds if d.get("decision") == "flag_review"]
+            facts["flagged_species"] = (
+                facts.get("flagged_species", []) + tflag)[:10]
+        except Exception:
+            pass
+    else:
+        delta = data / "decisions_delta.csv"
+        if delta.exists():
+            try:
+                import csv
+                with delta.open() as fh:
+                    rows = list(csv.DictReader(fh))
+                from collections import Counter
+                facts["tail_decisions"] = dict(
+                    Counter(r.get("decision") for r in rows))
+                tflag = [f"{r.get('species')}: {r.get('why', '')[:120]}"
+                         for r in rows
+                         if r.get("decision") == "flag_review"]
+                facts["flagged_species"] = (
+                    facts.get("flagged_species", []) + tflag)[:10]
+            except Exception:
+                pass
+    if "flagged_species" not in facts:
+        facts["flagged_species"] = []
     con.close()
+    return facts
+
+
+def briefing(client: MetaClient | None = None,
+             data_dir: Path | str = "data/serve",
+             model: str = MODEL_SHOWCASE) -> dict:
+    client = client or MetaClient()
+    data = Path(os.environ.get("DATA_DIR", data_dir))
+    f = facts(data)
 
     r = client.chat(
         model=model,
         messages=[{"role": "user",
-                   "content": PROMPT.format(facts=json.dumps(facts)[:6000])}],
+                   "content": PROMPT.format(facts=json.dumps(f)[:6000])}],
         response_format=BRIEF_SCHEMA,
     )
     out = json.loads(r["content"])
@@ -100,6 +143,6 @@ def briefing(client: MetaClient | None = None,
             "Ellipsoid niche models (xnicher) fit on 88 bioclim pairs per "
             "species over 1996-2025 ERA5 normals; risk = recency-weighted "
             "detection kernel aggregated to HUC8 watersheds.")
-    out["facts"] = facts
+    out["facts"] = f
     out["model"] = model
     return out
