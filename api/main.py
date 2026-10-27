@@ -30,6 +30,10 @@ def q(sql: str) -> list[dict]:
     c.execute("PRAGMA threads=4")
     try:
         return c.execute(sql).fetchdf().to_dict("records")
+    except HTTPException:
+        raise
+    except Exception as ex:
+        raise HTTPException(503, f"catalog query failed: {ex!r}"[:200])
     finally:
         c.close()
 
