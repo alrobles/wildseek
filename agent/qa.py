@@ -123,7 +123,7 @@ def _brain(man: dict | None) -> list[dict]:
                  "value": f"abstain: {ex}"[:120]}]
 
 
-def check(serve: Path | str = "data/serve", data: Path | str = "data",
+def check(serve: Path | str = "app/data", data: Path | str = "data",
           manifest: dict | None = None) -> dict:
     serve, data = Path(serve), Path(data)
     reviews = {"codigo": _codigo(serve), "seguridad": _seguridad(serve, data),
