@@ -24,32 +24,38 @@ cd "$B"   # slurm scripts run inside staging (copied there by sync)
 export WILDSEEK_DOMAIN="$DOM"
 EXP="--export=ALL,WILDSEEK_DOMAIN=$DOM,WILDSEEK_BEEG=$B"
 N_SHARDS=${N_SHARDS:-24}
+# KB 0:53: node families without the beegfs mount — exclude via env,
+# e.g. WILDSEEK_EXCLUDE='r05r10n[01-04]'
+EXC=""; [ -n "${WILDSEEK_EXCLUDE:-}" ] && EXC="--exclude=$WILDSEEK_EXCLUDE"
 
 submit() { # name deps cmd...
   local name=$1 deps=$2; shift 2
   local dep=""; [ -n "$deps" ] && dep="--dependency=afterok:$deps"
-  sbatch --parsable $EXP --job-name="dom_${DOM}_${name}" $dep \
+  sbatch --parsable $EXP $EXC --job-name="dom_${DOM}_${name}" $dep \
     --output="logs/${name}_${DOM}_%j.log" --error="logs/${name}_${DOM}_%j.err" "$@"
 }
+
+# Parallel-FS sanity (KB 0:53): wraps check the mount before running.
+GUARD="[ -d \"$B\" ] || { echo \"no beegfs on \$SLURMD_NODENAME\" >&2; exit 53; }"
 
 mkdir -p logs
 
 J_POOL=$(submit pool "" --partition=sixhour --time=04:00:00 --mem=48G --cpus-per-task=8 --wrap \
-  "\"${WILDSEEK_PY:-python3}\" gbif_pools.py")
+  "$GUARD ; \"${WILDSEEK_PY:-python3}\" gbif_pools.py")
 
 J_NORM=$(submit normals "" --partition=sixhour --time=06:00:00 --mem=16G --cpus-per-task=4 --wrap \
-  "\"${WILDSEEK_PY:-python3}\" conus_normals.py")
+  "$GUARD ; \"${WILDSEEK_PY:-python3}\" conus_normals.py")
 
 J_ECO=$(submit eco "$J_NORM" --partition=sixhour --time=01:00:00 --mem=40G --cpus-per-task=4 --wrap \
-  "\"${WILDSEEK_PY:-python3}\" eco_conus.py")
+  "$GUARD ; \"${WILDSEEK_PY:-python3}\" eco_conus.py")
 
-J_XNI_A=$(sbatch --parsable --job-name="dom_${DOM}_xni_aves" \
+J_XNI_A=$(sbatch --parsable $EXC --job-name="dom_${DOM}_xni_aves" \
   --partition=sixhour --time=06:00:00 --mem=16G --cpus-per-task=4 \
   --array=0-$((N_SHARDS-1)) --dependency=afterok:$J_POOL \
   --export=ALL,WILDSEEK_DOMAIN=$DOM,WILDSEEK_BEEG=$B,CLS=aves,N_SHARDS=$N_SHARDS,N_STARTS=60 \
   --output="logs/xni_aves_${DOM}_%A_%a.log" --error="logs/xni_aves_${DOM}_%A_%a.err" \
   xnicher_array.sbatch)
-J_XNI_M=$(sbatch --parsable --job-name="dom_${DOM}_xni_mam" \
+J_XNI_M=$(sbatch --parsable $EXC --job-name="dom_${DOM}_xni_mam" \
   --partition=sixhour --time=06:00:00 --mem=16G --cpus-per-task=4 \
   --array=0-$((N_SHARDS-1)) --dependency=afterok:$J_POOL \
   --export=ALL,WILDSEEK_DOMAIN=$DOM,WILDSEEK_BEEG=$B,CLS=mammalia,N_SHARDS=$N_SHARDS,N_STARTS=60 \
@@ -57,17 +63,17 @@ J_XNI_M=$(sbatch --parsable --job-name="dom_${DOM}_xni_mam" \
   xnicher_array.sbatch)
 
 J_COLLECT=$(submit collect "$J_XNI_A:$J_XNI_M" --partition=sixhour --time=01:00:00 --mem=32G --cpus-per-task=8 --wrap \
-  "\"${WILDSEEK_PY:-python3}\" collect_fits.py")
+  "$GUARD ; \"${WILDSEEK_PY:-python3}\" collect_fits.py")
 
 J_PHY=$(submit phy "$J_COLLECT" --partition=sixhour --time=04:00:00 --mem=48G --cpus-per-task=8 --wrap \
-  "\"${WILDSEEK_PY:-python3}\" name_reconcile.py \
+  "$GUARD ; \"${WILDSEEK_PY:-python3}\" name_reconcile.py \
    && Rscript phy_dist.R && Rscript phy_dist_birds.R \
    && \"${WILDSEEK_PY:-python3}\" dist_frame.py")
 
 J_MODEL=$(submit model "$J_PHY" --partition=sixhour --time=01:00:00 --mem=32G --cpus-per-task=8 --wrap \
-  "\"${WILDSEEK_PY:-python3}\" suscept_model.py")
+  "$GUARD ; \"${WILDSEEK_PY:-python3}\" suscept_model.py")
 
-J_PRED=$(sbatch --parsable --job-name="dom_${DOM}_predict" \
+J_PRED=$(sbatch --parsable $EXC --job-name="dom_${DOM}_predict" \
   --partition=sixhour --time=06:00:00 --mem=24G --cpus-per-task=4 \
   --array=0-$((N_SHARDS-1)) --dependency=afterok:$J_MODEL:$J_ECO \
   --export=ALL,WILDSEEK_DOMAIN=$DOM,WILDSEEK_BEEG=$B,N_SHARDS=$N_SHARDS \
