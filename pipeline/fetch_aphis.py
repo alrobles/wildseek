@@ -33,6 +33,13 @@ def main() -> None:
     df2.to_parquet(OUT / "aphis_livestock.parquet", index=False)
     print("livestock:", len(df2))
 
+    flocks = [dataclasses.asdict(e) for e in aphis.flock_events()]
+    df3 = pd.DataFrame(flocks)
+    df3.to_parquet(OUT / "aphis_poultry.parquet", index=False)
+    print("poultry flocks:", len(df3),
+          "| counties:", df3["county_fips"].nunique(),
+          "| birds_affected:", int(df3["birds_affected"].sum()))
+
     fly = aphis.flyways()
     (OUT / "aphis_flyways.json").write_text(json.dumps(fly))
     print("flyways:", len(fly))

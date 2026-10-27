@@ -23,10 +23,14 @@ import requests
 BASE = "https://services7.arcgis.com/2C1NQ7u6M6SXoa8p/arcgis/rest/services"
 WILD_BIRD = f"{BASE}/VS_Avian_Influenza_Wild_Bird_Surveillance_Dashboard_data_view_feature_layer_/FeatureServer/0/query"
 LIVESTOCK = f"{BASE}/VS_HPAI_Livestock_Events_Feature_Layer/FeatureServer/11/query"
+# APHIS commercial/backyard flock confirmations, county-level (OSU mirror
+# of the USDA APHIS public dataset)
+POULTRY = ("https://services1.arcgis.com/jWQlP64OuwDh6GGX/arcgis/rest/"
+           "services/hpai_commercial_backyard_usa/FeatureServer/0/query")
 FLYWAY_ADMIN = f"{BASE}/VS_Wild_Bird_Migratory_Flyways_US_Admin_and_Global/FeatureServer/0/query"
 FLYWAY_GLOBAL = f"{BASE}/VS_Wild_Bird_Migratory_Flyways_US_Admin_and_Global/FeatureServer/1/query"
 
-PAGE = 2000  # server maxRecordCount
+PAGE = 1000  # conservative: services cap maxRecordCount at 1000
 
 
 @dataclass
@@ -145,6 +149,36 @@ def livestock_events(limit: int | None = None) -> list[LivestockEvent]:
             confirmed=_ms(a.get("Conf_MMYY")),
             incident_site=a.get("Incident_Site") or "",
             total=a.get("Total") or 0.0,
+        ))
+    return out
+
+
+@dataclass
+class FlockEvent:
+    """HPAI confirmation in a commercial/backyard flock."""
+    state: str
+    county: str
+    county_fips: int | None
+    confirmed: datetime | None
+    production: str
+    birds_affected: float
+    lon: float | None
+    lat: float | None
+
+
+def flock_events(limit: int | None = None) -> list[FlockEvent]:
+    """Commercial/backyard flock confirmations (county-level)."""
+    out = []
+    for f in _query(POULTRY, "1=1", limit, "Confirmed DESC"):
+        a, g = f["attributes"], f.get("geometry") or {}
+        out.append(FlockEvent(
+            state=a.get("State") or "",
+            county=a.get("County_Name") or "",
+            county_fips=a.get("County_FIPS"),
+            confirmed=_ms(a.get("Confirmed")),
+            production=a.get("Production") or "",
+            birds_affected=float(a.get("Birds_Affected") or 0),
+            lon=g.get("x"), lat=g.get("y"),
         ))
     return out
 

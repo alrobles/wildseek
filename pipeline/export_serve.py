@@ -47,6 +47,11 @@ def main(src: str, dst: str) -> None:
             w = w[~w["specieskey"].isin(drops)]
         w.to_csv(d / "species_winner.csv", index=False)
 
+    meta = {
+        "built": time.strftime("%Y-%m-%d %H:%M UTC", time.gmtime()),
+        "n_detections": None,
+    }
+
     det = Path(src) / "aphis_wild_birds.parquet"
     if det.exists():
         rows = con.execute(
@@ -56,13 +61,38 @@ def main(src: str, dst: str) -> None:
         ).fetchall()
         feats = [{"type": "Feature",
                   "properties": {"state": r[2], "county": r[3],
-                                 "watershed": r[4], "date": str(r[5])},
+                                 "watershed": r[4], "date": str(r[5]),
+                                 "year": int(str(r[5])[:4]) if r[5] else None},
                   "geometry": {"type": "Point",
                                "coordinates": [r[0], r[1]]}}
                  for r in rows]
         (d / "detections.geojson").write_text(json.dumps(
             {"type": "FeatureCollection", "features": feats}))
-        print("detections:", len(feats))
+
+    pl = Path(src) / "aphis_poultry.parquet"
+    if pl.exists():
+        rows = con.execute(
+            f"""select lon, lat, state, county, production,
+                       birds_affected, confirmed
+                from '{pl}' where lat is not null"""
+        ).fetchall()
+        feats = [{"type": "Feature",
+                  "properties": {"state": r[2], "county": r[3],
+                                 "production": r[4],
+                                 "birds_affected": float(r[5]),
+                                 "confirmed": str(r[6])},
+                  "geometry": {"type": "Point",
+                               "coordinates": [r[0], r[1]]}}
+                 for r in rows]
+        (d / "poultry.geojson").write_text(json.dumps(
+            {"type": "FeatureCollection", "features": feats}))
+
+    ce = Path(src) / "county_exposure.geojson"
+    if ce.exists():
+        (d / "county_exposure.geojson").write_bytes(ce.read_bytes())
+        n = len(json.loads(ce.read_text())["features"])
+        meta["n_exposure_counties"] = n
+        print("exposure counties:", n)
 
     fly = Path(src) / "aphis_flyways.json"
     if fly.exists():
@@ -79,10 +109,6 @@ def main(src: str, dst: str) -> None:
             all(f["geometry"]["coordinates"][0] for f in gj["features"]), \
             "flyways export produced empty geometries"
 
-    meta = {
-        "built": time.strftime("%Y-%m-%d %H:%M UTC", time.gmtime()),
-        "n_detections": None,
-    }
     if det.exists():
         meta["n_detections"] = con.execute(
             f"select count(*) from '{det}' where pathogenicity='High Path AI'"

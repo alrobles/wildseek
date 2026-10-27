@@ -23,6 +23,7 @@ win <- win[win$specieskey %% n_shards == shard, ]
 cat("shard", shard, "species:", nrow(win), "\n")
 
 norm <- rast(sprintf("%s/env_conus_normals_1120.tif", OUT))
+eco_r <- rast(sprintf("%s/eco_conus_1120.tif", OUT))
 
 bc <- function(x, lam, eps) if (abs(lam) < 1e-8) log(x + eps) else ((x + eps)^lam - 1) / lam
 bc_lambda <- function(x) {
@@ -75,6 +76,10 @@ for (i in seq_len(nrow(win))) {
   if (is.null(fit)) { cat("refit fail", sp, "\n"); next }
   s <- tryCatch(predict(fit, stack), error = function(e) NULL)
   if (is.null(s)) { cat("predict fail", sp, "\n"); next }
+  # mask to the species' accessible area M (its occupied ecoregions);
+  # niche model only valid inside M
+  s[!(eco_r %in% ecos)] <- NA_real_
+  if (all(is.na(values(s)))) { cat("empty M", sp, "\n"); next }
   writeRaster(s, out_tif, overwrite = TRUE, datatype = "FLT4S")
   cat("suit", sp, win$species[i], "\n", flush = TRUE)
 }
