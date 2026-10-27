@@ -36,7 +36,7 @@ import pandas as pd
 
 TOPK = 5
 RANKS = ("genus", "family", "order", "class")   # deepest-first
-PHY_REAL = "v6_dated"
+PHY_REAL = "patristic"
 PHY_PROXY = "taxa_proxy"
 PHY_NONE = "none"
 

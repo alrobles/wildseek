@@ -54,6 +54,13 @@
   <h2>Layers</h2>
   <div class="layer"><label><input type="checkbox" id="ckRisk" checked>
     risk (detection × susceptibility)</label></div>
+  <div class="layer"><label><input type="checkbox" id="ckRsv">
+    reservoir community</label>
+    <select id="rsvMode" style="margin-left:16px;font-size:11px">
+      <option value="prob">P(&ge;1 susceptible host)</option>
+      <option value="sum">expected # hosts</option>
+      <option value="max">strongest host</option>
+    </select></div>
   <div class="layer"><label><input type="checkbox" id="ckCty">
     poultry exposure by county</label></div>
   <div class="layer"><label><input type="checkbox" id="ckDet">
@@ -125,6 +132,20 @@ async function load() {
     paint:{"circle-radius":2.5,"circle-color":"#f781bf",
       "circle-opacity":0.6}});
 
+  const setRsv = mode => {
+    if (map.getLayer("rsv")) map.removeLayer("rsv");
+    if (map.getSource("rsv")) map.removeSource("rsv");
+    map.addSource("rsv", {type:"image",
+      url: SRC+`reservoir_${mode}.png`, coordinates: META.suit_bbox});
+    map.addLayer({id:"rsv", type:"raster", source:"rsv",
+      layout:{visibility: document.getElementById("ckRsv").checked
+        ? "visible" : "none"},
+      paint:{"raster-opacity":0.65}}, "ctyFill");
+  };
+  setRsv("prob");
+  document.getElementById("rsvMode").onchange =
+    e => setRsv(e.target.value);
+
   map.addSource("flock", {type:"geojson", data: SRC+"poultry.geojson"});
   map.addLayer({id:"flockPt", type:"circle", source:"flock",
     layout:{visibility:"none"},
@@ -190,7 +211,7 @@ async function load() {
     document.getElementById(ck).onchange = e =>
       map.setLayoutProperty(id, "visibility",
         e.target.checked ? "visible" : "none");
-  vis("riskFill","ckRisk"); vis("ctyFill","ckCty");
+  vis("riskFill","ckRisk"); vis("ctyFill","ckCty"); vis("rsv","ckRsv");
   vis("detPt","ckDet");  vis("flockPt","ckFlock"); vis("flyLine","ckFly");
 
   // detection time filter

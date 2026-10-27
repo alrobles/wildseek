@@ -150,7 +150,8 @@ def main(src: str, dst: str) -> None:
             all(f["geometry"]["coordinates"][0] for f in gj["features"]), \
             "flyways export produced empty geometries"
 
-    for png in Path(src).glob("*.png"):
+    for png in list(Path(src).glob("*.png")) + \
+               list((Path(src) / "reservoir").glob("*.png")):
         (d / png.name).write_bytes(png.read_bytes())
         mj = Path(str(png) + ".meta.json")
         if mj.exists():
