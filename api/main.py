@@ -14,6 +14,7 @@ import os
 from pathlib import Path
 
 import duckdb
+import re
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
@@ -104,14 +105,13 @@ def risk_watershed(top: int = Query(100, ge=1, le=1000)) -> list[dict]:
 @app.get("/explain/{kind}/{ident}")
 def explain(kind: str, ident: str) -> JSONResponse:
     """System-1 typed explanation via muse-spark (see agent/explain.py)."""
-    import re
-
     from agent.explain import explain as do_explain  # agent pkg, not data
 
     if kind not in ("county", "watershed", "species"):
         raise HTTPException(400, "kind must be county|watershed|species")
-    # ident feeds both SQL filters and the baked-file path — whitelist it
-    if not re.fullmatch(r"[A-Za-z0-9_ .-]+", ident):
+    # ident feeds both SQL filters and the baked-file path — whitelist it.
+    # The regex allows dots/spaces, so reject ".." segments explicitly.
+    if not re.fullmatch(r"[A-Za-z0-9_ .-]+", ident) or ".." in ident:
         raise HTTPException(400, "bad ident")
     baked = DATA / f"explain_{kind}_{ident}.json"
     if baked.exists():
