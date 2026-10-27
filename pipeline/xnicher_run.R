@@ -31,9 +31,11 @@ PAIRS <- expand.grid(temp = TEMPS, prec = PRECS, stringsAsFactors = FALSE)
 con <- dbConnect(duckdb())
 dbExecute(con, "PRAGMA threads=4")
 
+POOL <- Sys.getenv("WILDSEEK_POOL", "")
+if (!nzchar(POOL)) POOL <- sprintf("pool_flagship%s.csv", SUF)
 pool <- dbGetQuery(con, sprintf(
-  "select * from '%s/pool_flagship%s.csv' where class='%s'",
-  OUT, SUF, if (cls == "mammalia") "Mammalia" else "Aves"))
+  "select * from '%s/%s' where class='%s'",
+  OUT, POOL, if (cls == "mammalia") "Mammalia" else "Aves"))
 idx <- which(pool$specieskey %% n_shards == shard)
 pool <- pool[idx, , drop = FALSE]
 cat("cls", cls, "shard", shard, "species:", nrow(pool), "\n")

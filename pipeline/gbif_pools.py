@@ -34,6 +34,9 @@ DOM = domain.name()
 SUF = domain.suffix()
 _B = domain.get()["bbox"]
 MIN_CELLS = domain.get()["min_cells"]
+# second, wider pool tier: every species with enough data to fit a
+# stable ellipsoid, regardless of flagship threshold
+MIN_CELLS_ALL = int(os.environ.get("WILDSEEK_MIN_CELLS_ALL", "30"))
 CLASSES = ["Mammalia", "Aves"]
 MIN_YEAR, MAX_YEAR = 1996, 2025
 CONUS = (
@@ -110,6 +113,10 @@ def main() -> None:
     con2.execute(
         f"""copy (select * from {counts} where n_cells_conus >= {MIN_CELLS})
             to '{OUT}/pool_flagship{SUF}.csv' (header, delimiter ',')"""
+    )
+    con2.execute(
+        f"""copy (select * from {counts} where n_cells_conus >= {MIN_CELLS_ALL})
+            to '{OUT}/pool_all{SUF}.csv' (header, delimiter ',')"""
     )
     con2.execute(
         f"""copy (select * from {counts}

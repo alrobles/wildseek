@@ -20,6 +20,7 @@ N_STARTS=${N_STARTS:-60}
 apptainer exec --cleanenv --env R_LIBS="$R_LIBS" \
   --env WILDSEEK_BEEG="$B" \
   --env WILDSEEK_DOMAIN="${WILDSEEK_DOMAIN:-conus}" \
+  --env WILDSEEK_POOL="${WILDSEEK_POOL:-}" \
   --bind "$(dirname "$(dirname "$B")")" "$SIF" \
   Rscript "$B/xnicher_run.R" \
   "$CLS" "$SLURM_ARRAY_TASK_ID" "$N_SHARDS" "$N_STARTS"
