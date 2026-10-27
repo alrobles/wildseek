@@ -5,6 +5,7 @@ weighted detections per watershed for the briefing layer.
 """
 
 import json
+import os
 
 import numpy as np
 import pandas as pd
@@ -20,9 +21,12 @@ def main() -> None:
     shapes = [(f["geometry"], i) for i, f in enumerate(feats)
               if f.get("geometry")]
 
-    with rasterio.open(f"{OUT}/risk_detect_1120.tif") as ds:
+    src = (f"{OUT}/risk_1120.tif" if os.path.exists(f"{OUT}/risk_1120.tif")
+           else f"{OUT}/risk_detect_1120.tif")
+    with rasterio.open(src) as ds:
         risk = ds.read(1)
         tr, H, W = ds.transform, ds.height, ds.width
+    print("risk source:", src)
 
     idx = rasterize(shapes, out_shape=(H, W), transform=tr,
                     fill=-1, dtype="int32")

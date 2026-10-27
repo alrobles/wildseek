@@ -14,6 +14,8 @@ Inputs:
 Runs under SLURM (grid math, not login node).
 """
 
+import os
+
 import numpy as np
 import pandas as pd
 import rasterio
@@ -53,6 +55,34 @@ def main() -> None:
         d.write(surf, 1)
     print("risk_detect_1120:", int(ok.sum()), "detections rasterized,",
           "max", float(np.nanmax(surf)))
+
+    # Stage 2: mean suitability across Aves winners -> risk x susceptibility
+    win = pd.read_csv(f"{OUT}/species_winner.csv")
+    pool = pd.read_csv(f"{OUT}/pool_flagship.csv")
+    aves = set(pool.loc[pool["class"] == "Aves", "specieskey"])
+    wins = [k for k in win["specieskey"] if k in aves]
+    acc = np.zeros((H, W), np.float64)
+    n = 0
+    for k in wins:
+        p = f"{OUT}/suit/suit_{k}.tif"
+        if not os.path.exists(p):
+            continue
+        with rasterio.open(p) as ds:
+            a = ds.read(1)
+            if a.shape != (H, W):
+                continue
+            acc += np.where(np.isfinite(a), a, 0)
+            n += 1
+    if n:
+        mean_suit = (acc / n).astype(np.float32)
+        risk = surf * mean_suit
+        if np.nanmax(risk) > 0:
+            risk = risk / np.nanmax(risk)
+        np.save(f"{OUT}/mean_suit_aves_1120.npy", mean_suit)
+        with rasterio.open(f"{OUT}/risk_1120.tif", "w", **prof) as d:
+            d.write(risk.astype(np.float32), 1)
+        print("risk_1120:", n, "aves suit layers averaged; max",
+              float(np.nanmax(risk)))
 
 
 if __name__ == "__main__":
