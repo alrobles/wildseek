@@ -11,8 +11,9 @@ Deterministic gate first: a species only reaches the agent when the
 Agent verdicts have teeth:
   - drop          -> species leaves species_winner_served.csv (the map)
   - flag_review   -> review=true column in served catalog
-  - switch_to     -> schedules refit (skew_t / ip_weighted / more_starts),
-                     delta records old_aic -> new_aic after refit
+  - switch_family / refit_more_starts -> schedules refit (switch_to column
+                     carries the target family, or "more_starts"), delta
+                     records old_aic -> new_aic after refit
   - accept        -> stays, but only ~the tail was ever asked
 
 Outputs:
@@ -173,16 +174,20 @@ def main() -> None:
         dec = d.get("decision", "accept")
         if dec == "drop":
             drops.add(int(r["specieskey"]))
+        # more_starts is a DECISION (refit, same family) — surface it in
+        # switch_to so the refit queue picks it up
+        sw = "more_starts" if dec == "refit_more_starts" \
+            else d.get("switch_to", "none")
         rows.append({
             "specieskey": int(r["specieskey"]),
             "species": r["species"],
             "decision": dec,
-            "switch_to": d.get("switch_to", "none"),
+            "switch_to": sw,
             "why": d.get("reason", ""),
             "tail_reason": r["tail_reason"],
             "aic_old": r["aic"],
             "aic_new": None,
-            "changed": dec in ("drop", "switch_to") or dec == "flag_review",
+            "changed": dec != "accept",
             "in_map_before": True,
             "in_map_after": dec != "drop",
             "confidence": d.get("confidence"),

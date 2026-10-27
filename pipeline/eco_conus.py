@@ -31,8 +31,11 @@ def main():
     rows, cols = np.mgrid[0:H, 0:W]
     lons = tr.c + (cols + 0.5) * tr.a
     lats = tr.f + (rows + 0.5) * tr.e   # tr.e negative
-    lb = np.clip(np.round((lats + 90) * 30).astype(np.int32), 0, 5400)
-    ob = np.clip(np.round((lons + 180) * 30).astype(np.int32), 0, 10800)
+    # floor, matching eco_raster_130 convention floor((coord+90)*30) on
+    # cell edges — round() on centers pushes the top fine-cell of each
+    # 1/30 band into the next bin
+    lb = np.clip(np.floor((lats + 90) * 30).astype(np.int32), 0, 5400)
+    ob = np.clip(np.floor((lons + 180) * 30).astype(np.int32), 0, 10800)
     out = lut[ob, lb]
     print("matched frac:", float((out >= 0).mean()))
 

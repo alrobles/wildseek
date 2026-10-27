@@ -162,7 +162,7 @@ async function load() {
       "circle-stroke-color":"#fff3","circle-stroke-width":1}});
 
   // --- watershed watchlist -----------------------------------------
-  const ws = await fetch("/risk/watershed?limit=15").then(r=>r.json())
+  const ws = await fetch("/risk/watershed?top=15").then(r=>r.json())
     .catch(()=>[]);
   const wl = document.getElementById("wslist");
   wl.innerHTML = ws.map(w =>
@@ -187,7 +187,7 @@ async function load() {
 
   // --- species drill-down -------------------------------------------
   const sel = document.getElementById("spSel");
-  const sp = await fetch("/species").then(r=>r.json()).catch(()=>[]);
+  const sp = await fetch("/species?limit=1200").then(r=>r.json()).catch(()=>[]);
   (Array.isArray(sp) ? sp : []).forEach(r => {
     const o = document.createElement("option");
     o.value = r.specieskey;
@@ -280,7 +280,7 @@ async function explainWatershed(huc) {
       b.risk_level ? `risk level: ${b.risk_level}` : "";
     document.getElementById("ccBody").innerHTML =
       (b.drivers || []).map(d=>"• "+esc(d)).join("<br>") +
-      (b.recommendation ? `<br><br>${esc(b.recommendation)}` : "");
+      (b.sampling_rec ? `<br><br>${esc(b.sampling_rec)}` : "");
   } catch(err) {
     document.getElementById("ccTitle").textContent = "explain unavailable";
   }

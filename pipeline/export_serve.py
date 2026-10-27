@@ -146,9 +146,13 @@ def main(src: str, dst: str) -> None:
             for f in feats]}
         out = d / "flyways.geojson"
         out.write_text(json.dumps(gj))
-        assert out.stat().st_size > 1_000_000 and \
-            all(f["geometry"]["coordinates"][0] for f in gj["features"]), \
-            "flyways export produced empty geometries"
+        if not (out.stat().st_size > 1_000_000 and
+                all(f["geometry"]["coordinates"][0]
+                    for f in gj["features"])):
+            # degrade like the other optional spatial layers — a thin
+            # flyways file must not kill the whole export before meta.json
+            out.unlink(missing_ok=True)
+            print("WARN: flyways export looked empty — skipped")
 
     for png in list(Path(src).glob("*.png")) + \
                list((Path(src) / "reservoir").glob("*.png")):

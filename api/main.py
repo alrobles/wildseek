@@ -11,7 +11,6 @@ synced from the cluster staging dir ($WILDSEEK_BEEG on the HPC side).
 
 import json
 import os
-from functools import lru_cache
 from pathlib import Path
 
 import duckdb
@@ -24,15 +23,15 @@ DATA = Path(os.environ.get("DATA_DIR", "data/serve"))
 app = FastAPI(title="WildSeek", version="0.1.0")
 
 
-@lru_cache
-def con() -> duckdb.DuckDBPyConnection:
+def q(sql: str) -> list[dict]:
+    # fresh connection per query: DuckDB connections are not thread-safe
+    # and FastAPI runs sync endpoints on a threadpool
     c = duckdb.connect()
     c.execute("PRAGMA threads=4")
-    return c
-
-
-def q(sql: str) -> list[dict]:
-    return con().execute(sql).fetchdf().to_dict("records")
+    try:
+        return c.execute(sql).fetchdf().to_dict("records")
+    finally:
+        c.close()
 
 
 def _stamp() -> str | None:

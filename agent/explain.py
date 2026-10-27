@@ -55,20 +55,24 @@ def explain(kind: str, ident: str, data_dir: Path | str,
     con = duckdb.connect()
     facts: dict = {"kind": kind, "id": ident}
 
+    # ident comes straight from the URL path — escape quotes before
+    # interpolating (specieskey cast to int, the rest are string cols)
+    esc = str(ident).replace("'", "''")
     if kind == "species":
         f = data / "species_winner.csv"
         if f.exists():
+            cond = (f"specieskey={int(ident)}" if str(ident).isdigit()
+                    else f"lower(species)=lower('{esc}')")
             r = con.execute(
-                f"select * from '{f}' where specieskey={ident} "
-                f"or lower(species)=lower('{ident}') limit 1"
+                f"select * from '{f}' where {cond} limit 1"
             ).fetchdf()
             facts["fit"] = r.to_dict("records")
     else:
         f = data / "risk_watershed.parquet"
         if f.exists():
             r = con.execute(
-                f"select * from '{f}' where huc8='{ident}' "
-                f"or name ilike '%{ident}%' "
+                f"select * from '{f}' where huc8='{esc}' "
+                f"or name ilike '%{esc}%' "
                 f"order by risk desc limit 5"
             ).fetchdf()
             facts["risk"] = r.to_dict("records")

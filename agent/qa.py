@@ -19,9 +19,20 @@ META_KEYS_UI = ("suit_bbox", "risk_png", "risk_bbox",
                 "reservoir_sum_png", "n_species", "n_detections")
 
 
+def _meta(serve: Path) -> dict | None:
+    """meta.json absent/corrupt -> reviewers report a failed check instead
+    of crashing the approver."""
+    try:
+        return json.loads((serve / "meta.json").read_text())
+    except Exception:
+        return None
+
+
 def _codigo(serve: Path) -> list[dict]:
     c = []
-    m = json.loads((serve / "meta.json").read_text())
+    m = _meta(serve)
+    if m is None:
+        return [{"name": "meta.json readable", "ok": False}]
     c.append({"name": "n_species>=1000",
               "ok": (m.get("n_species") or 0) >= 1000,
               "value": m.get("n_species")})
@@ -54,7 +65,9 @@ def _codigo(serve: Path) -> list[dict]:
 def _seguridad(serve: Path, data: Path) -> list[dict]:
     c = []
     prev = data / "detect_seen.json"
-    m = json.loads((serve / "meta.json").read_text())
+    m = _meta(serve)
+    if m is None:
+        return [{"name": "meta.json readable", "ok": False}]
     if prev.exists():
         p = json.loads(prev.read_text())
         drop = (p.get("n", 0) - (m.get("n_detections") or 0)) \
@@ -71,7 +84,9 @@ def _seguridad(serve: Path, data: Path) -> list[dict]:
 
 
 def _ux(serve: Path) -> list[dict]:
-    m = json.loads((serve / "meta.json").read_text())
+    m = _meta(serve)
+    if m is None:
+        return [{"name": "meta.json readable", "ok": False}]
     missing = [k for k in META_KEYS_UI if k not in m]
     c = [{"name": "meta.json ui keys", "ok": not missing,
           "value": f"missing: {missing}" if missing else "all"}]
