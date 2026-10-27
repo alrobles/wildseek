@@ -16,25 +16,38 @@ supply-chain exposure, county-level.
 
 ```
 GBIF occurrences (1/120° grid)   USDA APHIS hub (ArcGIS, no key)
-        │                        wild-bird + livestock detections
-        ▼                        flyway polygons
-  pipeline/ ── species pools + ecoregion accessible area (M)
+        │                        wild-bird + mammal detections
+        ▼                        (species-level) + flock events +
+  pipeline/ ── species pools +   flyway polygons
+        │   ecoregion accessible area (M, 95% of presences)
         │   + ERA5 30-year normals → env_occ / env_m
         ▼
   xnicher campaign ── 88 bio-var pairs × 1,148 species
         │   = 101,376 fits, all accepted; AIC winners
         ▼
   agent/ ── Muse Spark typed triage over fit diagnostics
-        │   ambiguous tail (AIC-tied, sparse, marine) →
-        │   accept / flag_review / drop / switch_family,
-        │   then a real refit runner honours switch_to
+        │   ambiguous tail → 49 flag_review w/ substantive reasons
         ▼
-  pipeline/ ── per-species suitability rasters (CONUS 1/120°)
-        │   × recency-weighted detection kernel → risk_1120
-        │   → HUC8 watershed ranking (sub-county, named)
+  pipeline/ ── suitability rasters MASKED to each species' M
+        │   (EPSG:3857 PNGs; fix: never project outside the
+        │   accessible area — CONUS-wide bleed was wrong)
         ▼
-  api/ + app/ ── wildseek.ecoseek.org: monitoring map,
-             /explain + /briefing with cached agent outputs
+  susceptibility model (PNAS three-axis, reimplemented):
+        │   env  = Jaccard over occupied 19-bioclim cells
+        │   geo  = Jaccard over M ecoregion sets
+        │   phy  = patristic distance, phyloseek v6 dated tree
+        │          (mammals; birds = taxa proxy until BirdTree)
+        │   labels = 159 APHIS-confirmed H5N1 host species
+        │   model = logistic ×2-interactions vs HGB;
+        │           winner logreg ROC-AUC 0.876, bootstrap CIs
+        │           → P(host) per species, live at /susceptibility
+        ▼
+  risk = detection kernel × mean aves suitability → HUC8
+        → county exposure (flock confirmations × birds affected)
+        ▼
+  api/ + app/ ── wildseek.ecoseek.org: risk-first monitor,
+             click→watershed/county/detection cards,
+             /explain + /briefing with baked agent outputs
 ```
 
 Two parallel views of the same score: which wild vertebrates are
@@ -61,11 +74,10 @@ work submitted here was built during Oct 26 – Nov 4, 2026.
 
 | Dir | What |
 |---|---|
-| `model/` | R wrapper over `alrobles/PNAS-...` + `phylopred` + `pam` |
+| `pipeline/` | env/jaccard + phy distances, dist_frame, suscept_model, M-masked predict, raster→serve chain |
 | `agent/` | Python — Meta Model API client, extraction prompts, APHIS hub client |
 | `api/` | FastAPI monitor service |
 | `app/` | Map frontend (geoseek pattern) |
-| `pipeline/` | Scheduled re-score loop |
 | `data/` | Local artifacts (gitignored) |
 | `papers/` | Reference papers |
 | `docs/` | `meta-api.md` (API facts/pricing), `data-sources.md` (endpoints) |
