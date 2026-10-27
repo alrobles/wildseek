@@ -36,13 +36,14 @@ def main() -> None:
     fig.patch.set_facecolor("#0a0f14")
     ax.set_facecolor("#0a0f14")
 
-    ax.plot(df.observation_date, df.price, color="#f2607a", lw=1.8, zorder=3)
+    ax.plot(df.observation_date, df.price, color="#4ade80", lw=1.6,
+            marker="o", ms=2.6, mfc="#4ade80", mec="none", zorder=3)
     ax.fill_between(df.observation_date, df.price, 0,
-                    color="#f2607a", alpha=0.18, zorder=2)
+                    color="#4ade80", alpha=0.16, zorder=2)
     ax.axvspan(pd.Timestamp(OUTBREAK), df.observation_date.max(),
-               color="#f2607a", alpha=0.06, zorder=1)
+               color="#4ade80", alpha=0.05, zorder=1)
 
-    ax.annotate("Brote de\ngripe aviar",
+    ax.annotate("Avian flu\noutbreak",
                 xy=(pd.Timestamp(OUTBREAK), 1.6), xytext=(
                     pd.Timestamp("2019-03-01"), 3.3),
                 color="#c9d1d9", fontsize=12, ha="center",
@@ -61,10 +62,10 @@ def main() -> None:
                     fontweight="bold",
                     arrowprops=dict(arrowstyle="-", color="#8b949e"))
 
-    ax.annotate("Huevos", xy=(df.observation_date.iloc[-1],
+    ax.annotate("Eggs", xy=(df.observation_date.iloc[-1],
                               df.price.iloc[-1] + 0.12),
                 xytext=(10, 0), textcoords="offset points",
-                color="#f2607a", fontsize=13, fontweight="bold")
+                color="#4ade80", fontsize=13, fontweight="bold")
 
     ax.set_xlim(df.observation_date.min(), df.observation_date.max())
     ax.set_ylim(0, df.price.max() * 1.12)
@@ -75,11 +76,11 @@ def main() -> None:
         s.set_color("#30363d")
     ax.tick_params(colors="#8b949e", labelsize=11)
     ax.grid(axis="y", color="#21262d", ls="--", alpha=0.6)
-    ax.set_title("Precios de los alimentos", color="#e6edf3",
-                 fontsize=26, fontweight="bold", pad=34, loc="center",
+    ax.set_title("Food prices", color="#e6edf3",
+                 fontsize=26, fontweight="bold", pad=46, loc="center",
                  fontfamily="monospace")
-    fig.text(0.5, 0.895, "Precio medio de huevos (docena) — BLS/FRED "
-             "APU0000708111 · sombreado = brote HPAI",
+    fig.text(0.5, 0.872, "Average egg price (dozen) — BLS/FRED "
+             "APU0000708111 · shaded = HPAI outbreak",
              color="#8b949e", fontsize=11, ha="center")
     fig.text(0.02, 0.5, "USD", color="#8b949e", fontsize=10,
              rotation=90, va="center")
