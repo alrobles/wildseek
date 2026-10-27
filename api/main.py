@@ -14,7 +14,7 @@ import os
 from pathlib import Path
 
 import duckdb
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Query
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 
@@ -52,7 +52,8 @@ def health() -> dict:
 
 
 @app.get("/species")
-def species(limit: int = 200, cls: str | None = None) -> list[dict]:
+def species(limit: int = Query(200, ge=1, le=1000),
+            cls: str | None = None) -> list[dict]:
     f = DATA / "species_winner.csv"
     if not f.exists():
         raise HTTPException(503, "catalog not exported yet")
@@ -69,7 +70,7 @@ def species(limit: int = 200, cls: str | None = None) -> list[dict]:
 
 
 @app.get("/susceptibility")
-def susceptibility(top: int = 100) -> list[dict]:
+def susceptibility(top: int = Query(100, ge=1, le=1000)) -> list[dict]:
     """PNAS-style P(host|env,geo,phy proximity to known H5N1 hosts)."""
     f = DATA / "susceptibility.parquet"
     if not f.exists():
@@ -89,7 +90,7 @@ def species_fit(key: int) -> dict:
 
 
 @app.get("/risk/watershed")
-def risk_watershed(top: int = 100) -> list[dict]:
+def risk_watershed(top: int = Query(100, ge=1, le=1000)) -> list[dict]:
     f = DATA / "risk_watershed.parquet"
     if not f.exists():
         raise HTTPException(503, "risk layer not exported yet")
