@@ -16,6 +16,9 @@ services:
     container_name: ecoseek-wildseek
     ports:
       - "127.0.0.1:8654:8654"
+    volumes:
+      # runtime data overlay (ecoseek pattern: data lives on host, ro)
+      - ../app/data:/app/frontend/data:ro
     environment:
       DATA_DIR: "/app/frontend/data"
       STATIC_DIR: "/app/frontend"
