@@ -6,7 +6,7 @@ the /explain endpoint (muse-spark narrative, System-1 typed).
 
 Run:  DATA_DIR=/srv/hpai uvicorn api.main:app --port 8100
 DATA_DIR holds the exported artifacts (GeoParquet / CSV / COG / PMTiles)
-synced from /beegfs/a474r867/meta-hack on kuhpc.
+synced from the cluster staging dir ($WILDSEEK_BEEG on the HPC side).
 """
 
 import json
@@ -58,7 +58,8 @@ def species(limit: int = 200, cls: str | None = None) -> list[dict]:
     if not f.exists():
         raise HTTPException(503, "catalog not exported yet")
     sus = DATA / "susceptibility.parquet"
-    w = f"and lower(species) like '%{cls.lower()}%'" if cls else ""
+    w = (f"and lower(species) like "
+         f"'%{cls.lower().replace("'", "''")}%'") if cls else ""
     where = f"where 1=1 {w}" if w else ""
     if sus.exists():
         return q(f"select w.*, s.p_host, s.p05, s.p95, s.label as host_label "

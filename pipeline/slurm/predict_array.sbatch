@@ -6,13 +6,15 @@
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=4
 #SBATCH --mem=32G
-#SBATCH --output=/beegfs/a474r867/meta-hack/logs/pred_%A_%a.log
-#SBATCH --error=/beegfs/a474r867/meta-hack/logs/pred_%A_%a.err
+#SBATCH --output=logs/pred_%A_%a.log
+#SBATCH --error=logs/pred_%A_%a.err
 # array task: SLURM_ARRAY_TASK_ID = shard index; env N_SHARDS
-if [ ! -d /beegfs/a474r867 ]; then exit 53; fi
-export R_LIBS=/beegfs/a474r867/rlib_442
-SIF=/home/a474r867/geospatial-rserver/xsdm_latest.sif
+B="${WILDSEEK_BEEG:?set WILDSEEK_BEEG to the staging dir}"
+[ -d "$B" ] || exit 53
+export R_LIBS="${WILDSEEK_RLIBS:-$(dirname "$B")/rlib_442}"
+SIF="${WILDSEEK_SIF:-$HOME/geospatial-rserver/xsdm_latest.sif}"
 N_SHARDS=${N_SHARDS:-1}
-apptainer exec --cleanenv --env R_LIBS="$R_LIBS" --bind /beegfs "$SIF" \
-  Rscript /beegfs/a474r867/meta-hack/predict_suit.R \
-  "$SLURM_ARRAY_TASK_ID" "$N_SHARDS"
+apptainer exec --cleanenv --env R_LIBS="$R_LIBS" \
+  --env WILDSEEK_BEEG="$B" \
+  --bind "$(dirname "$(dirname "$B")")" "$SIF" \
+  Rscript "$B/predict_suit.R" "$SLURM_ARRAY_TASK_ID" "$N_SHARDS"

@@ -1,13 +1,14 @@
 # Patristic distances among our species.
-#   Mammalia: cophenetic on phyloseek's dated v6 tree (MDD tips) pruned
-#             to matched names -> REAL phylogenetic distance (Myr).
+#   Mammalia: cophenetic on a dated tree (MDD tips) pruned to matched
+#             names -> REAL phylogenetic distance (Myr). Tree path via
+#             env WILDSEEK_MAMMAL_TREE, default data/v6_point.nwk.
 #   Aves:     no tree yet -> phy_source="proxy" rows are left to the
 #             GBIF taxonomic fallback in dist_frame.py.
 # Output: phy_dist.csv (item1,item2,phylo_distance,source)
 
 library(ape)
 
-TREE <- "/home/reumanlab/GitHub/phyloseek-devel/results/dating_v6/v6_point.nwk"
+TREE <- Sys.getenv("WILDSEEK_MAMMAL_TREE", "data/v6_point.nwk")
 W <- read.csv("data/species_winner.csv", stringsAsFactors = FALSE)
 W$u <- gsub(" ", "_", W$species)
 

@@ -95,13 +95,13 @@ class MetaClient:
     @classmethod
     def local(cls) -> "MetaClient":
         """Self-hosted Muse Glimmer on KU HPC (free). Requires the ssh
-        tunnel on :20007 — see ~/.hermes/scripts/hpc-muse-tunnel-watchdog.sh."""
+        tunnel on :20007 (kept alive by a user-level watchdog job)."""
         return cls(api_key="ollama", base_url=LOCAL_BASE_URL)
 
     @classmethod
     def local_mi210(cls) -> "MetaClient":
         """Self-hosted Muse Glimmer on a MI210 via llama.cpp rocm (~44 tok/s).
-        Tunnel on :20009 — see ~/.hermes/scripts/hpc-musemi-tunnel-watchdog.sh.
+        Tunnel on :20009 (watchdog-maintained).
         Falls back to the staggered instance on :20010 on connection error."""
         c = cls(api_key="llama", base_url=LOCAL_MI210_BASE_URL)
         c._fallback_bases = (LOCAL_MI210_BASE_URL, LOCAL_MI210_B_URL)

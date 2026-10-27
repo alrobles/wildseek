@@ -1,0 +1,8 @@
+# Paths stripped from the curated public snapshot (one pathspec per line).
+# Internal ops docs — cluster users/paths, deploy procedure, review output.
+docs/HANDOFF.md
+docs/muse-reviews
+docs/morning-status.md
+docs/night-run.md
+docs/plan.md
+docs/prompts/devin-hermes-muse.md

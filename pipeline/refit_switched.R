@@ -10,7 +10,7 @@
 suppressMessages({
   library(duckdb); library(DBI); library(xnicher)
 })
-OUT <- "/beegfs/a474r867/meta-hack"
+OUT <- Sys.getenv("WILDSEEK_BEEG", ".")
 n_starts <- 60L
 
 con <- dbConnect(duckdb()); dbExecute(con, "PRAGMA threads=4")

@@ -25,7 +25,7 @@ universe is optional — missing files degrade to empty coverage with a
 warning.
 
     python pipeline/dist_frame.py                       # data/ -> data/dist_frame.parquet
-    python pipeline/dist_frame.py --base /beegfs/a474r867/meta-hack
+    python pipeline/dist_frame.py --base "$WILDSEEK_BEEG"
 """
 import argparse
 import sys

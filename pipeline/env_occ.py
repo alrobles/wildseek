@@ -13,11 +13,12 @@ a live query on the cube. Output: env_occ_{cls}.parquet
 Runs under SLURM (no login-node compute).
 """
 
+import os
 import sys
 import duckdb
 import time
 
-OUT = "/beegfs/a474r867/meta-hack"
+OUT = os.environ.get("WILDSEEK_BEEG", ".")
 NORM = f"'{OUT}/env_normals_96_25.parquet'"
 
 

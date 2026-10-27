@@ -19,10 +19,11 @@ DuckDB-only; runs on the login node in minutes. To run as an array:
 """
 
 import argparse
+import os
 import duckdb
 import time
 
-OUT = "/beegfs/a474r867/meta-hack"
+OUT = os.environ.get("WILDSEEK_BEEG", ".")
 CLASSES = ["mammalia", "aves"]
 BIN = "round((lat_30+90)*30)::int lat_bin, round((lon_30+180)*30)::int lon_bin"
 ECO = f"'{OUT}/eco_raster_130.csv.gz'"

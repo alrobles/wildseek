@@ -12,7 +12,7 @@ suppressMessages({
 args <- commandArgs(trailingOnly = TRUE)
 shard <- as.integer(args[1]); n_shards <- as.integer(args[2])
 n_starts <- 60L
-OUT <- "/beegfs/a474r867/meta-hack"
+OUT <- Sys.getenv("WILDSEEK_BEEG", ".")
 bios <- paste0("bio", sprintf("%02d", 1:19))
 
 con <- dbConnect(duckdb()); dbExecute(con, "PRAGMA threads=4")

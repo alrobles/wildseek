@@ -5,7 +5,7 @@ Builds an operational cell-level env table: every land pixel of the
 "env for ecoregions X,Y,Z" (a species' M) or "by bioregion/realm" is a
 plain DuckDB query, not a geoprocess.
 
-Layout under /beegfs/a474r867/meta-hack/:
+Layout under $WILDSEEK_BEEG (default: cwd):
   env_cube_raw/year=YYYY.parquet   col,row + bio01..19 (melted GeoTIFF)
   env_cell_map.parquet             col,row,lat,lon -> eco_id,eco_name,realm,biome
   env_cube/year=YYYY.parquet       raw + eco_id joined (final cube)
@@ -20,13 +20,19 @@ Phases (run any subset):
 
 import argparse
 import glob
+import os
+
 import duckdb
 import numpy as np
 import rasterio
 import time
 
-SRC = "/beegfs/a474r867/era5_bioclim/v1/era5land_bioclim_{year}.tif"
-OUT = "/beegfs/a474r867/meta-hack"
+OUT = os.environ.get("WILDSEEK_BEEG", ".")
+# era5 bioclim store: sibling dir of the staging root unless overridden
+_ERA5 = os.environ.get(
+    "WILDSEEK_ERA5",
+    os.path.join(os.path.dirname(os.path.abspath(OUT)), "era5_bioclim"))
+SRC = f"{_ERA5}/v1/era5land_bioclim_{{year}}.tif"
 ECO = f"'{OUT}/eco_raster_130.csv.gz'"
 BIOS = [f"bio{str(i).zfill(2)}" for i in range(1, 20)]
 

@@ -5,12 +5,14 @@ Bin lookup via direct array indexing (no merge): bins are small ints
 (lon_bin < 10800, lat_bin < 5400), so a dense int32 LUT is ~230MB and
 O(1) per query.
 """
+import os
+
 import numpy as np
 import pandas as pd
 import rasterio
 from rasterio.transform import from_bounds
 
-OUT = "/beegfs/a474r867/meta-hack"
+OUT = os.environ.get("WILDSEEK_BEEG", ".")
 
 
 def main():

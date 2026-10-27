@@ -7,17 +7,19 @@
 library(ape)
 library(phytools)
 
-TRE <- "/tmp/birdtree/e2/Stage2_MayrAll_Ericson_set10_decisive.tre"
+BIRD_DIR <- Sys.getenv("WILDSEEK_BIRDTREE_DIR", "data/birdtree")
+TRE <- file.path(BIRD_DIR, "e2/Stage2_MayrAll_Ericson_set10_decisive.tre")
 W <- read.csv("data/species_winner.csv", stringsAsFactors = FALSE)
 W$u <- gsub(" ", "_", W$species)
 
-bt <- read.csv("/tmp/birdtree/BLIOCPhyloMasterTax.csv")
+bt <- read.csv(file.path(BIRD_DIR, "BLIOCPhyloMasterTax.csv"))
 sci2tip <- setNames(bt$TipLabel, bt$Scientific)
 
 # our-name -> tip label: direct Scientific match, else GBIF synonym map
 syn <- if (file.exists("data/bird_syn_map.csv"))
        read.csv("data/bird_syn_map.csv") else data.frame()
-syn_map <- setNames(syn$tip, syn$X)
+syn_map <- if (nrow(syn)) setNames(syn$tip, syn$X) else
+           setNames(character(), character())
 
 our_tip <- sci2tip[W$species]
 missing <- is.na(our_tip)

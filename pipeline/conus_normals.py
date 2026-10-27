@@ -16,8 +16,11 @@ import numpy as np
 import rasterio
 from rasterio.windows import from_bounds
 
-SRC = "/beegfs/a474r867/era5_bioclim/publish/_{y}_split/bio{v:02d}_{y}.tif"
-OUT = "/beegfs/a474r867/meta-hack"
+OUT = os.environ.get("WILDSEEK_BEEG", ".")
+_ERA5 = os.environ.get(
+    "WILDSEEK_ERA5",
+    os.path.join(os.path.dirname(os.path.abspath(OUT)), "era5_bioclim"))
+SRC = f"{_ERA5}/publish/_{{y}}_split/bio{{v:02d}}_{{y}}.tif"
 YEARS = range(1996, 2026)
 LON_MIN, LON_MAX, LAT_MIN, LAT_MAX = -125.0, -66.0, 24.0, 49.5
 

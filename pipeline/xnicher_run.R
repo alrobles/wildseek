@@ -21,7 +21,7 @@ shard     <- as.integer(args[2])
 n_shards  <- as.integer(args[3])
 n_starts  <- if (length(args) >= 4) as.integer(args[4]) else 60L
 
-OUT   <- "/beegfs/a474r867/meta-hack"
+OUT   <- Sys.getenv("WILDSEEK_BEEG", ".")
 TEMPS <- paste0("bio", sprintf("%02d", 1:11))
 PRECS <- paste0("bio", sprintf("%02d", 12:19))
 PAIRS <- expand.grid(temp = TEMPS, prec = PRECS, stringsAsFactors = FALSE)

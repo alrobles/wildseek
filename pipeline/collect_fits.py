@@ -7,9 +7,11 @@ fit) -> species_winner.parquet. Also emits per-species campaign stats
 for the T1 decision layer.
 """
 
+import os
+
 import duckdb
 
-OUT = "/beegfs/a474r867/meta-hack"
+OUT = os.environ.get("WILDSEEK_BEEG", ".")
 
 
 def main() -> None:

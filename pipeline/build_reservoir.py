@@ -9,6 +9,7 @@ Three accumulation rules over the M-masked suit_<key>.tif stack:
 
 Pixels outside every species' M stay NaN.
 """
+import os
 import sys
 from pathlib import Path
 
@@ -16,7 +17,7 @@ import numpy as np
 import pandas as pd
 import rasterio
 
-ROOT = Path("/beegfs/a474r867/meta-hack")
+ROOT = Path(os.environ.get("WILDSEEK_BEEG", "."))
 SUIT, OUT = ROOT / "suit", ROOT / "reservoir"
 OUT.mkdir(exist_ok=True)
 

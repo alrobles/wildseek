@@ -89,6 +89,8 @@
 
 <script>
 const SRC = "data/";
+const esc = s => String(s ?? "").replace(/[&<>"']/g,
+  c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const map = new maplibregl.Map({
   container: "map",
   style: { version: 8,
@@ -109,10 +111,14 @@ async function load() {
     `HPAI detections · built ${META.built ?? ""}`;
 
   // --- base layers -------------------------------------------------
-  map.addSource("risk", {type:"image", url: SRC+META.risk_png,
-    coordinates: META.risk_bbox});
-  map.addLayer({id:"riskFill", type:"raster", source:"risk",
-    paint:{"raster-opacity":0.7}});
+  // image sources need meta keys; without them the source URL would be
+  // "undefined" and the whole load() would die — guard each one.
+  if (META.risk_png && META.risk_bbox) {
+    map.addSource("risk", {type:"image", url: SRC+META.risk_png,
+      coordinates: META.risk_bbox});
+    map.addLayer({id:"riskFill", type:"raster", source:"risk",
+      paint:{"raster-opacity":0.7}});
+  } else document.getElementById("ckRisk").disabled = true;
 
   map.addSource("cty", {type:"geojson", data: SRC+"county_exposure.geojson"});
   map.addLayer({id:"ctyFill", type:"fill", source:"cty",
@@ -135,6 +141,7 @@ async function load() {
   const setRsv = mode => {
     if (map.getLayer("rsv")) map.removeLayer("rsv");
     if (map.getSource("rsv")) map.removeSource("rsv");
+    if (!META.suit_bbox) return;
     map.addSource("rsv", {type:"image",
       url: SRC+`reservoir_${mode}.png`, coordinates: META.suit_bbox});
     map.addLayer({id:"rsv", type:"raster", source:"rsv",
@@ -159,8 +166,8 @@ async function load() {
     .catch(()=>[]);
   const wl = document.getElementById("wslist");
   wl.innerHTML = ws.map(w =>
-    `<div class="wsrow" data-huc="${w.huc8}">
-       <b>${w.risk.toFixed(3)}</b> ${w.name} <span class="sub">${w.states}</span>
+    `<div class="wsrow" data-huc="${esc(w.huc8)}">
+       <b>${w.risk.toFixed(3)}</b> ${esc(w.name)} <span class="sub">${esc(w.states)}</span>
        <div class="sub">${w.n_det} detections · max ${w.max_risk.toFixed(2)}</div>
      </div>`).join("") || "unavailable";
   wl.querySelectorAll(".wsrow").forEach(el => el.onclick =
@@ -192,13 +199,13 @@ async function load() {
     if (map.getSource("suit")) map.removeSource("suit");
     const row = (Array.isArray(sp)?sp:[]).find(r=>r.specieskey==sel.value);
     document.getElementById("sel").innerHTML = row ?
-      `${row.species} · ${row.best_temp}×${row.best_prec}` +
+      `${esc(row.species)} · ${esc(row.best_temp)}×${esc(row.best_prec)}` +
       (row.p_host != null ? ` · <b>P(host)=${row.p_host.toFixed(2)}</b>` +
        (row.p05 != null ? ` [${row.p05.toFixed(2)}–${row.p95.toFixed(2)}]` : "")
        : "") +
       (row.host_label ? ' <span class="badge">known host</span>' : "") +
       (row.review ? ' <span class="badge">flag_review</span>' : "") : "";
-    if (sel.value) {
+    if (sel.value && META.suit_bbox) {
       map.addSource("suit", {type:"image",
         url: SRC+`suit_${sel.value}.png`, coordinates: META.suit_bbox});
       map.addLayer({id:"suit", type:"raster", source:"suit",
@@ -208,9 +215,11 @@ async function load() {
 
   // --- toggles -------------------------------------------------------
   const vis = (id, ck) =>
-    document.getElementById(ck).onchange = e =>
-      map.setLayoutProperty(id, "visibility",
-        e.target.checked ? "visible" : "none");
+    document.getElementById(ck).onchange = e => {
+      if (map.getLayer(id))
+        map.setLayoutProperty(id, "visibility",
+          e.target.checked ? "visible" : "none");
+    };
   vis("riskFill","ckRisk"); vis("ctyFill","ckCty"); vis("rsv","ckRsv");
   vis("detPt","ckDet");  vis("flockPt","ckFlock"); vis("flyLine","ckFly");
 
@@ -218,8 +227,9 @@ async function load() {
   document.getElementById("detYear").oninput = e => {
     const y = e.target.value;
     document.getElementById("detYearLbl").textContent = `through ${y}`;
-    map.setFilter("detPt",
-      ["<=", ["get","year"], ["to-number", y]]);
+    if (map.getLayer("detPt"))
+      map.setFilter("detPt",
+        ["<=", ["get","year"], ["to-number", y]]);
   };
 
   // --- click → watershed/county card ---------------------------------
@@ -248,7 +258,7 @@ async function load() {
         `${p.name} Co., ${p.state}`;
       document.getElementById("ccSub").textContent =
         `county exposure ${p.exposure}`;
-      document.getElementById("ccBody").innerHTML =
+      document.getElementById("ccBody").textContent =
         `mean risk ${p.mean_risk} · ${p.events} flock confirmations · ` +
         `${Number(p.birds_affected).toLocaleString()} birds affected`;
       return;
@@ -269,8 +279,8 @@ async function explainWatershed(huc) {
     document.getElementById("ccSub").textContent =
       b.risk_level ? `risk level: ${b.risk_level}` : "";
     document.getElementById("ccBody").innerHTML =
-      (b.drivers || []).map(d=>"• "+d).join("<br>") +
-      (b.recommendation ? `<br><br>${b.recommendation}` : "");
+      (b.drivers || []).map(d=>"• "+esc(d)).join("<br>") +
+      (b.recommendation ? `<br><br>${esc(b.recommendation)}` : "");
   } catch(err) {
     document.getElementById("ccTitle").textContent = "explain unavailable";
   }

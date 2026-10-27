@@ -1,10 +1,11 @@
 #!/bin/bash
-# Deploy WildSeek to reumanlab-terminal (ecoseek stack pattern).
+# Deploy WildSeek to the serve host (ecoseek stack pattern).
 # Run from the repo root on the dev machine:
-#   bash serve/deploy.sh
+#   WILDSEEK_DEPLOY_HOST=myhost WILDSEEK_DEPLOY_DIR=/srv/wildseek \
+#     bash serve/deploy.sh
 set -euo pipefail
-HOST=reumanlab-terminal
-DEST=/home/alrobles/wildseek
+HOST="${WILDSEEK_DEPLOY_HOST:?set WILDSEEK_DEPLOY_HOST}"
+DEST="${WILDSEEK_DEPLOY_DIR:?set WILDSEEK_DEPLOY_DIR}"
 
 echo "== rsync code =="
 rsync -a --delete --exclude=.git --exclude=data --exclude='*.tif' \
@@ -26,7 +27,7 @@ cloudflared tunnel route dns <existing-tunnel-id> wildseek.ecoseek.org
 #   -> writes credentials json + tunnel id
 # add to ~/.cloudflared/wildseek.yml:
 #   tunnel: <id>
-#   credentials-file: /home/alrobles/.cloudflared/<id>.json
+#   credentials-file: $HOME/.cloudflared/<id>.json
 #   ingress:
 #     - hostname: wildseek.ecoseek.org
 #       service: http://127.0.0.1:8654

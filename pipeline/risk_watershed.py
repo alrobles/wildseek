@@ -12,7 +12,7 @@ import pandas as pd
 import rasterio
 from rasterio.features import rasterize
 
-OUT = "/beegfs/a474r867/meta-hack"
+OUT = os.environ.get("WILDSEEK_BEEG", ".")
 
 
 def main() -> None:

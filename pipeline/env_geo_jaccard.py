@@ -11,11 +11,13 @@ J>0 to keep size sane) + per-species footprint sizes. Runs on beegfs.
     python3 env_geo_jaccard.py            # both axes
     python3 env_geo_jaccard.py geo        # geo only (fast)
 """
+import os
 import sys
+
 import numpy as np
 import pandas as pd
 
-OUT = "/beegfs/a474r867/meta-hack"
+OUT = os.environ.get("WILDSEEK_BEEG", ".")
 N_BINS = 16          # quantile bins per bioclim axis
 MIN_PAIR_J = 0.0     # keep all pairs; threshold later
 

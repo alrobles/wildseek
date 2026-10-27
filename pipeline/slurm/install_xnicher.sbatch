@@ -4,12 +4,13 @@
 #SBATCH --time=02:00:00
 #SBATCH --mem=8G
 #SBATCH --cpus-per-task=2
-#SBATCH --output=/beegfs/a474r867/meta-hack/logs/install_xnicher_%j.log
-if [ ! -d /beegfs/a474r867 ]; then exit 53; fi
-export R_LIBS=/beegfs/a474r867/rlib_442
+#SBATCH --output=logs/install_xnicher_%j.log
+B="${WILDSEEK_BEEG:?set WILDSEEK_BEEG to the staging dir}"
+[ -d "$B" ] || exit 53
+export R_LIBS="${WILDSEEK_RLIBS:-$(dirname "$B")/rlib_442}"
 mkdir -p "$R_LIBS"
-SIF=/home/a474r867/geospatial-rserver/xsdm_latest.sif
-SRC=/beegfs/a474r867/rlib_442/srcpkgs
+SIF="${WILDSEEK_SIF:-$HOME/geospatial-rserver/xsdm_latest.sif}"
+SRC="$R_LIBS/srcpkgs"
 apptainer exec --cleanenv --env R_LIBS="$R_LIBS" "$SIF" R --slave -e "
 lib <- Sys.getenv('R_LIBS'); src <- '$SRC'
 pkgs <- c('Rcpp','RcppEigen','RcppParallel','checkmate','xnicher')

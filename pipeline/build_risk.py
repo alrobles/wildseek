@@ -21,7 +21,7 @@ import pandas as pd
 import rasterio
 from scipy.ndimage import gaussian_filter
 
-OUT = "/beegfs/a474r867/meta-hack"
+OUT = os.environ.get("WILDSEEK_BEEG", ".")
 HALF_LIFE_D = 90.0          # detection recency half-life (days)
 SIGMA_CELLS = 12.0          # ~10 km at 1/120 deg
 
@@ -59,12 +59,22 @@ def main() -> None:
     # Stage 2: detection pressure x reservoir community.
     # reservoir_sum = sum_i p_host_i * suit_i (all classes, M-masked,
     # built by build_reservoir.py) — replaces the older unweighted
-    # Aves-mean suitability.
-    with rasterio.open(f"{OUT}/reservoir/reservoir_sum.tif") as ds:
-        rsv = ds.read(1).astype(np.float32)
-        assert rsv.shape == (H, W), f"reservoir grid mismatch {rsv.shape}"
-    rsv_norm = rsv / np.nanmax(rsv) if np.nanmax(rsv) > 0 else rsv
-    risk = surf * np.where(np.isfinite(rsv_norm), rsv_norm, 0)
+    # Aves-mean suitability. Absent the reservoir map (fresh staging,
+    # non-refit chain), fall back to detection-only risk rather than
+    # kill the whole stage.
+    rsv_path = f"{OUT}/reservoir/reservoir_sum.tif"
+    if os.path.exists(rsv_path):
+        with rasterio.open(rsv_path) as ds:
+            rsv = ds.read(1).astype(np.float32)
+            assert rsv.shape == (H, W), \
+                f"reservoir grid mismatch {rsv.shape}"
+        rsv_norm = rsv / np.nanmax(rsv) if np.nanmax(rsv) > 0 else rsv
+        risk = surf * np.where(np.isfinite(rsv_norm), rsv_norm, 0)
+    else:
+        print("WARN: reservoir_sum.tif absent — risk = detection only "
+              "(run build_reservoir.py to enable stage 2)")
+        rsv_norm = np.full((H, W), np.nan, np.float32)
+        risk = surf.copy()
     if np.nanmax(risk) > 0:
         risk = risk / np.nanmax(risk)
     np.save(f"{OUT}/reservoir_norm_1120.npy", rsv_norm)

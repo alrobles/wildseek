@@ -3,22 +3,30 @@
 Factory roles -> Muse surfaces:
   ENTRADA   fetch_aphis.py             -> fresh APHIS layers (local API)
   SPEC      agent/planner.py           -> data/run_spec.json
-  BUILDER   kuhpc sbatch --wait         -> risk chain (+refit if spec)
+  BUILDER   hpc sbatch + sacct poll     -> risk chain (+refit if spec)
   REFIT     local labels->dist_frame->model (GBIF API + sklearn venv)
   APPROVER  agent/qa.py on exported data
-  PRODUCCION rsync -> terminal + /health verify
+  PRODUCCION rsync -> deploy host + /health verify
   BRAIN     run manifest; muse-glimmer (MI210, free) writes the shift log
   SELF-HEAL on stage failure -> `muse exec` gets the traceback, patches,
-            stage retries once. Escalates to run manifest on double fail.
+            stage retries once. Opt-in via WILDSEEK_SELFHEAL=1 or --heal;
+            off by default (no unattended code edits without a knob).
 
 Usage:  python pipeline/nightly.py           # full run
         python pipeline/nightly.py --dry     # spec only, no compute
-Cron:   15 3 * * * cd <repo> && .venv/bin/python pipeline/nightly.py
+Cron:   15 3 * * * cd <repo> && WILDSEEK_BEEG=... WILDSEEK_DEPLOY=... \\
+            MODEL_API_KEY=... .venv/bin/python pipeline/nightly.py
+
+Env: WILDSEEK_BEEG    staging dir on the HPC cluster (required full run)
+     WILDSEEK_DEPLOY  rsync target  host:dir/  for serve_data (required)
+     WILDSEEK_KUHPC   ssh alias for the cluster (default "kuhpc")
+     WILDSEEK_SELFHEAL=1 allow `muse exec --yolo` self-heal (default off)
 """
 from __future__ import annotations
 
 import argparse
 import json
+import os
 import subprocess
 import sys
 import time
@@ -27,9 +35,13 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 PY = ROOT / ".venv/bin/python"
-BEEG = "/beegfs/a474r867/meta-hack"
-TERMINAL = "reumanlab-terminal:/home/alrobles/wildseek/app/data/"
+KUHPC = os.environ.get("WILDSEEK_KUHPC", "kuhpc")
+BEEG = os.environ.get("WILDSEEK_BEEG", "")
+TERMINAL = os.environ.get("WILDSEEK_DEPLOY", "")
 RUNS = ROOT / "data/runs"
+
+SLURM_DONE = {"COMPLETED", "FAILED", "CANCELLED", "TIMEOUT", "BOOT_FAIL",
+              "NODE_FAIL", "OUT_OF_MEMORY", "PREEMPTED", "DEADLINE"}
 
 
 def sh(cmd: str, check: bool = True, timeout: int = 3600) -> str:
@@ -41,10 +53,38 @@ def sh(cmd: str, check: bool = True, timeout: int = 3600) -> str:
     return (r.stdout + r.stderr).strip()
 
 
-def self_heal(stage_name: str, err: str) -> bool:
+def need(val: str, var: str) -> str:
+    if not val:
+        raise RuntimeError(f"set {var} first (see module docstring)")
+    return val
+
+
+def wait_slurm(jobid: str, poll: int = 120, budget: float = 6.5 * 3600
+               ) -> str:
+    """Poll sacct until a terminal state. Submit+poll (not sbatch --wait)
+    because the job outlives any subprocess timeout — --wait used to get
+    killed at the timeout and mark a live job as failed. Budget exceeds
+    the sixhour partition cap (6h) so a healthy job always resolves."""
+    t0 = time.time()
+    while time.time() - t0 < budget:
+        out = sh(f"ssh {KUHPC} 'sacct -j {jobid} -n -o State | head -1'",
+                 check=False, timeout=60)
+        state = (out.split() or [""])[0].upper()
+        if state in SLURM_DONE:
+            return state
+        time.sleep(poll)
+    return "POLL_TIMEOUT"
+
+
+def self_heal(stage_name: str, err: str, heal: bool) -> bool:
     """Hand the traceback to Muse Code; returns True if it produced an
     edit worth retrying. muse exec runs in this repo — it can read the
-    failing script and patch it."""
+    failing script and patch it. Disabled unless WILDSEEK_SELFHEAL=1 or
+    --heal (unattended --yolo edits in prod are opt-in, not default)."""
+    if not heal:
+        print("self-heal disabled (WILDSEEK_SELFHEAL=1 or --heal to arm)",
+              flush=True)
+        return False
     prompt = (
         f"The nightly WildSeek pipeline stage '{stage_name}' just failed "
         f"with this error:\n\n{err[-3000:]}\n\nDiagnose and apply the "
@@ -76,7 +116,8 @@ def stage(name, retries=1):
                     err = str(ex)
                     print(f"{name} FAILED: {err[:400]}", flush=True)
                     if attempt < retries:
-                        healed = self_heal(name, err)
+                        healed = self_heal(name, err,
+                                           bool(man.get("heal")))
                         man["stages"].setdefault("heals", []).append(
                             {"stage": name, "attempt": attempt,
                              "healed": healed})
@@ -109,26 +150,35 @@ def refit(man):
     print(sh(f"{PY} {ROOT}/pipeline/species_labels.py", timeout=1800)[-400:])
     print(sh(f"{PY} {ROOT}/pipeline/dist_frame.py", timeout=1800)[-600:])
     print(sh(f"{PY} {ROOT}/pipeline/suscept_model.py", timeout=2400)[-800:])
-    sh("scp -q data/serve/susceptibility.parquet "
-       f"kuhpc:{BEEG}/", timeout=120)
+    sh(f"scp -q data/serve/susceptibility.parquet "
+       f"{KUHPC}:{need(BEEG, 'WILDSEEK_BEEG')}/", timeout=120)
 
 
 @stage("BUILDER")
 def builder(man):
+    beeg = need(BEEG, "WILDSEEK_BEEG")
     sh("rsync -a data/aphis_*.parquet data/aphis_flyways.json "
        "data/run_spec.json data/detect_seen.json "
-       f"kuhpc:{BEEG}/", timeout=300)
+       f"{KUHPC}:{beeg}/", timeout=300)
     refit_on = man["spec"]["stages"].get("refit")
     script = "nightly_refit.sbatch" if refit_on else "nightly.sbatch"
-    job = sh(f"ssh kuhpc 'sbatch --wait {BEEG}/{script}'", timeout=5400)
-    print(job[-400:])
+    job = sh(f"ssh {KUHPC} 'cd {beeg} && sbatch --parsable "
+             f"--export=ALL,WILDSEEK_BEEG={beeg} {script}'", timeout=120)
+    jobid = job.strip().split()[-1].split(";")[0]
+    print("submitted job", jobid, flush=True)
+    state = wait_slurm(jobid)
+    man["stages"].setdefault("slurm", {})[script] = \
+        {"job": jobid, "state": state}
+    if state != "COMPLETED":
+        raise RuntimeError(f"slurm {jobid} ({script}) -> {state}")
 
 
 @stage("APPROVER")
 def approver(man):
     stg = ROOT / "data/stage_serve"
     stg.mkdir(exist_ok=True)
-    sh(f"rsync -a --delete kuhpc:{BEEG}/serve_data/ {stg}/", timeout=900)
+    sh(f"rsync -a --delete {KUHPC}:{need(BEEG, 'WILDSEEK_BEEG')}"
+       f"/serve_data/ {stg}/", timeout=900)
     sys.path.insert(0, str(ROOT))
     from agent import qa
     rep = qa.check(stg, ROOT / "data", manifest=man)
@@ -146,7 +196,7 @@ def produccion(man):
     man["critical"] = bool(man["spec"]["stages"].get("refit"))
     man["needs_human_release"] = man["critical"]
     stg = ROOT / "data/stage_serve"
-    sh(f"rsync -a {stg}/ {TERMINAL}", timeout=900)
+    sh(f"rsync -a {stg}/ {need(TERMINAL, 'WILDSEEK_DEPLOY')}", timeout=900)
     health = sh("curl -s -m 10 https://wildseek.ecoseek.org/health",
                 check=False)
     man["health"] = health[:200]
@@ -162,8 +212,10 @@ def briefing_stage(man):
        f"{ROOT}/app/data/", timeout=900)
     print(sh(f"{PY} {ROOT}/pipeline/precompute_agent.py",
              timeout=1200)[-400:])
-    sh("rsync -a app/data/briefing.json app/data/explain_*.json "
-       f"{TERMINAL}", timeout=300)
+    tgt = need(TERMINAL, "WILDSEEK_DEPLOY")
+    sh(f"rsync -a app/data/briefing.json {tgt}", timeout=300)
+    sh(f"rsync -a --include='explain_*.json' --exclude='*' "
+       f"app/data/ {tgt}", timeout=300)
 
 
 @stage("BRAIN")
@@ -187,11 +239,16 @@ def brain(man):
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--dry", action="store_true")
+    ap.add_argument("--heal", action="store_true",
+                    help="allow muse exec --yolo self-heal on stage "
+                         "failure (same as WILDSEEK_SELFHEAL=1)")
     a = ap.parse_args()
 
     RUNS.mkdir(parents=True, exist_ok=True)
     man = {"run": datetime.now(timezone.utc).isoformat(timespec="seconds"),
-           "stages": {}}
+           "stages": {},
+           "heal": a.heal or
+                   os.environ.get("WILDSEEK_SELFHEAL", "") == "1"}
     try:
         for s in (entrada, spec):
             s(man)

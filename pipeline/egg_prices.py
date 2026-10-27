@@ -16,7 +16,6 @@ OUT = Path(__file__).resolve().parent.parent / "docs/assets/egg_prices.png"
 OUT.parent.mkdir(parents=True, exist_ok=True)
 
 OUTBREAK = "2022-02-08"   # first HPAI commercial-flock confirmation (USDA)
-TROUGH_LBL, PEAK_LBL = "$1.36", "$6.23"
 
 
 def main() -> None:
