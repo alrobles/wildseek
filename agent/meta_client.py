@@ -34,7 +34,9 @@ MODEL_EXTRACTION = "muse-spark-1.2-contributor"  # bulk lit-mining
 MODEL_AGENT = "muse-spark-1.3"                   # orchestration brain
 MODEL_SHOWCASE = "muse-wonder-1.0"               # final/demo reasoning
 MODEL_LOCAL = "muse-glimmer"                     # self-hosted 30B on KU HPC
-LOCAL_BASE_URL = "http://127.0.0.1:20007/v1"     # ssh tunnel -> ollama job
+LOCAL_BASE_URL = "http://127.0.0.1:20007/v1"     # ssh tunnel -> ollama job (Q6000)
+LOCAL_MI210_BASE_URL = "http://127.0.0.1:20009/v1"  # ssh tunnel -> llama.cpp rocm (MI210)
+LOCAL_BASE_URLS = (LOCAL_BASE_URL, LOCAL_MI210_BASE_URL)
 
 
 @dataclass
@@ -94,6 +96,12 @@ class MetaClient:
         tunnel on :20007 — see ~/.hermes/scripts/hpc-muse-tunnel-watchdog.sh."""
         return cls(api_key="ollama", base_url=LOCAL_BASE_URL)
 
+    @classmethod
+    def local_mi210(cls) -> "MetaClient":
+        """Self-hosted Muse Glimmer on a MI210 via llama.cpp rocm (~44 tok/s).
+        Tunnel on :20009 — see ~/.hermes/scripts/hpc-musemi-tunnel-watchdog.sh."""
+        return cls(api_key="llama", base_url=LOCAL_MI210_BASE_URL)
+
     def list_models(self) -> list[str]:
         r = self._http.get(f"{self.base}/models", timeout=30)
         r.raise_for_status()
@@ -118,7 +126,7 @@ class MetaClient:
         }
         # Ollama's OpenAI shim rejects reasoning_effort ("does not support
         # thinking") — only send it to the hosted Meta API.
-        if not self.base.startswith(LOCAL_BASE_URL):
+        if not self.base.startswith(LOCAL_BASE_URLS):
             body["reasoning_effort"] = reasoning_effort
         if temperature is not None:
             body["temperature"] = temperature
@@ -141,9 +149,10 @@ class MetaClient:
         self.spend.add(model, cost)
         return {
             "content": choice["message"].get("content"),
-            # Ollama splits the chain-of-thought into a `reasoning` field
-            # (muse-glimmer); hosted Meta folds it into usage stats only.
-            "reasoning": choice["message"].get("reasoning"),
+            # Ollama uses `reasoning`, llama.cpp `reasoning_content`;
+            # hosted Meta folds CoT into usage stats only.
+            "reasoning": choice["message"].get("reasoning")
+            or choice["message"].get("reasoning_content"),
             "finish_reason": choice.get("finish_reason"),
             "model": model,
             "usage": usage,
