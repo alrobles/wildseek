@@ -167,8 +167,8 @@ async function load() {
   const wl = document.getElementById("wslist");
   wl.innerHTML = ws.map(w =>
     `<div class="wsrow" data-huc="${esc(w.huc8)}">
-       <b>${w.risk.toFixed(3)}</b> ${esc(w.name)} <span class="sub">${esc(w.states)}</span>
-       <div class="sub">${w.n_det} detections · max ${w.max_risk.toFixed(2)}</div>
+       <b>${(w.risk ?? 0).toFixed(3)}</b> ${esc(w.name)} <span class="sub">${esc(w.states)}</span>
+       <div class="sub">${w.n_det} detections · max ${(w.max_risk ?? 0).toFixed(2)}</div>
      </div>`).join("") || "unavailable";
   wl.querySelectorAll(".wsrow").forEach(el => el.onclick =
     () => explainWatershed(el.dataset.huc));

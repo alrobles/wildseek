@@ -99,10 +99,15 @@ def risk_watershed(top: int = 100) -> list[dict]:
 @app.get("/explain/{kind}/{ident}")
 def explain(kind: str, ident: str) -> JSONResponse:
     """System-1 typed explanation via muse-spark (see agent/explain.py)."""
+    import re
+
     from agent.explain import explain as do_explain  # agent pkg, not data
 
     if kind not in ("county", "watershed", "species"):
         raise HTTPException(400, "kind must be county|watershed|species")
+    # ident feeds both SQL filters and the baked-file path — whitelist it
+    if not re.fullmatch(r"[A-Za-z0-9_ .-]+", ident):
+        raise HTTPException(400, "bad ident")
     baked = DATA / f"explain_{kind}_{ident}.json"
     if baked.exists():
         return JSONResponse(json.loads(baked.read_text()))
