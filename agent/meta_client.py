@@ -18,7 +18,7 @@ from dataclasses import dataclass, field
 
 import requests
 
-BASE_URL = "https://api.meta.ai/v1"
+BASE_URL = os.environ.get("META_BASE_URL", "https://api.meta.ai/v1")
 
 # USD per 1M tokens: (cached_input, input, output)
 PRICES = {

@@ -1,4 +1,4 @@
-"""Structured host-parasite evidence extraction via Meta Model API.
+"""Structured host-pathogen evidence extraction via Meta Model API.
 
 Bulk jobs run on muse-spark contributor models (public literature only —
 Meta may train on contributor-mode content). Every record carries the
@@ -57,24 +57,25 @@ EXTRACTION_SCHEMA = {
 }
 
 INSTRUCTIONS = """\
-You are extracting host-parasite association records from scientific
+You are extracting host-pathogen association records from scientific
 literature for a wildlife-disease surveillance system.
 
 From the paper title and abstract below, extract every claim that a
-species is a host of (or was found infested/infected by) the parasite
+species is a host of (or was found infected/infested by) the pathogen
 {parasite} (or its common names: {parasite_common}).
 
 Rules:
 - host_species: latin binomial if the text gives it, else the common name.
-- evidence: short phrase describing the kind of record (e.g. "larvae
-  collected from", "seropositive", "experimental infestation").
+- evidence: short phrase describing the kind of record (e.g. "naturally
+  infected", "found dead, PCR-confirmed", "experimental inoculation",
+  "seropositive").
 - verbatim_quote: copy the exact supporting sentence(s) from the text.
   Never paraphrase this field.
 - country/year: only if stated; "" otherwise.
 - confidence: high = observed in nature; medium = experimental or
   indirect; low = speculative / listed without direct record.
 - If the text contains NO host records for {parasite}, return
-  {{"records": []}}. Do not extract records for other parasites.
+  {{"records": []}}. Do not extract records for other pathogens.
 
 TITLE: {title}
 

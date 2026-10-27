@@ -5,6 +5,8 @@ from agent.host_list import HostList, norm_name
 from agent.lit_search import _reconstruct_abstract
 from agent.meta_client import Usage, Spend
 from agent.resolve import _vernacular_overlap
+from agent.aphis import Detection, _ms
+from agent.run_mine import _slug
 
 
 def _ev(host="Odocoileus virginianus", parasite="Cochliomyia hominivorax",
@@ -101,6 +103,25 @@ def test_consolidate_resolved():
     assert e["host_species"] == "Homo sapiens"
     assert e["n_evidence"] == 3
     assert {"human", "humans", "man"} <= set(e["common_names"])
+
+
+def test_ms_epoch():
+    assert _ms(1626134400000).year == 2021
+    assert _ms(None) is None
+
+
+def test_detection_is_hpai():
+    d = Detection(state="NE", county="Otoe", watershed="",
+                  date_collected=None, iav="Detected", h5="Detected",
+                  h7="", pathogenicity="High Path AI", lon=None, lat=None)
+    assert d.is_hpai
+    d.pathogenicity = ""
+    assert not d.is_hpai
+
+
+def test_slug():
+    assert _slug("Influenza A virus subtype H5N1") == \
+        "influenza_a_virus_subtype_h5n1"
 
 
 def test_vernacular_overlap():

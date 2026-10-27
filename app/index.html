@@ -1,0 +1,123 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>WildSeek — wildlife disease monitor</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link href="https://unpkg.com/maplibre-gl@4/dist/maplibre-gl.css" rel="stylesheet">
+<script src="https://unpkg.com/maplibre-gl@4/dist/maplibre-gl.js"></script>
+<style>
+  body { margin:0; font:13px system-ui, sans-serif; }
+  #map { position:absolute; inset:0; }
+  #panel { position:absolute; top:0; left:0; width:300px; max-height:100vh;
+           overflow:auto; background:#0d1117ee; color:#e6edf3; padding:12px;
+           z-index:5; }
+  #panel h1 { font-size:15px; margin:4px 0 10px; }
+  #panel .stat { color:#8b949e; margin:2px 0; }
+  #panel select, #panel input { width:100%; background:#161b22; color:#e6edf3;
+    border:1px solid #30363d; padding:5px; margin:4px 0; }
+  .layer { margin:6px 0; }
+</style>
+</head>
+<body>
+<div id="map"></div>
+<div id="panel">
+  <h1>WildSeek — HPAI Monitor</h1>
+  <div class="stat" id="meta">loading…</div>
+  <div class="layer"><label><input type="checkbox" id="ckRisk" checked>
+    sub-county risk (watershed)</label></div>
+  <div class="layer"><label><input type="checkbox" id="ckDet">
+    HPAI detections</label></div>
+  <div class="layer"><label><input type="checkbox" id="ckFly" checked>
+    flyways</label></div>
+  <div class="layer">species suitability
+    <select id="spSel"><option value="">—</option></select></div>
+  <div class="stat" id="sel"></div>
+  <div class="layer"><button id="btnBrief" style="width:100%;background:#21262d;color:#e6edf3;border:1px solid #30363d;padding:5px;cursor:pointer">
+    nightly briefing (muse-wonder)</button></div>
+  <div class="stat" id="brief" style="white-space:pre-wrap;font-size:11px"></div>
+</div>
+<script>
+const API = "";                       // same origin: api proxied by frontend
+const SRC = "data/";                  // static exports (geojson/pmtiles/cog)
+
+const map = new maplibregl.Map({
+  container: "map",
+  style: {
+    version: 8,
+    sources: { osm: { type:"raster", tileSize:256,
+      tiles:["https://tile.openstreetmap.org/{z}/{x}/{y}.png"],
+      attribution:"© OSM" }},
+    layers: [{ id:"osm", type:"raster", source:"osm" }]
+  },
+  center: [-98, 39], zoom: 4
+});
+map.addControl(new maplibregl.NavigationControl());
+
+async function load() {
+  const meta = await fetch(SRC + "meta.json").then(r=>r.json()).catch(()=>({}));
+  document.getElementById("meta").textContent =
+    `catalog: ${meta.n_species ?? "?"} spp · ` +
+    `HPAI: ${meta.n_detections ?? "?"} detections · built ${meta.built ?? ""}`;
+
+  if (meta.risk_png) {
+    map.addSource("risk", {type:"image", url: SRC+meta.risk_png,
+      coordinates: meta.risk_bbox});
+    map.addLayer({id:"riskFill", type:"raster", source:"risk",
+      paint:{"raster-opacity":0.7}});
+  }
+
+  map.addSource("fly", {type:"geojson", data: SRC+"flyways.geojson"});
+  map.addLayer({id:"flyLine", type:"line", source:"fly",
+    paint:{"line-color":"#8b949e","line-dasharray":[4,2],"line-width":1.5}});
+
+  map.addSource("det", {type:"geojson", data: SRC+"detections.geojson"});
+  map.addLayer({id:"detPt", type:"circle", source:"det", layout:{visibility:"none"},
+    paint:{"circle-radius":2.5,"circle-color":"#f781bf","circle-opacity":0.6}});
+
+  const sel = document.getElementById("spSel");
+  const sp = await fetch(SRC + "species_winner.csv").then(r=>r.text()).catch(()=>"");
+  sp.split("\n").slice(1).forEach(l => {
+    const c = l.split(",");
+    if (c.length > 1 && c[1]) {
+      const o = document.createElement("option");
+      o.value = c[0]; o.textContent = c[1];
+      sel.appendChild(o);
+    }
+  });
+  sel.onchange = () => {
+    document.getElementById("sel").textContent =
+      sel.value ? `specieskey ${sel.value}` : "";
+    if (map.getLayer("suit")) map.removeLayer("suit");
+    if (map.getSource("suit")) map.removeSource("suit");
+    if (sel.value) {
+      map.addSource("suit", {type:"image",
+        url: SRC + `suit_${sel.value}.png`,
+        coordinates: meta.suit_bbox});
+      map.addLayer({id:"suit", type:"raster", source:"suit",
+        paint:{"raster-opacity":0.65}}, "riskFill");
+    }
+  };
+  const vis = (id, ck) =>
+    document.getElementById(ck).onchange = e =>
+      map.setLayoutProperty(id, "visibility", e.target.checked ? "visible" : "none");
+  vis("riskFill","ckRisk"); vis("detPt","ckDet"); vis("flyLine","ckFly");
+
+  document.getElementById("btnBrief").onclick = async () => {
+    const el = document.getElementById("brief");
+    el.textContent = "generating…";
+    try {
+      const b = await fetch("/briefing").then(r => r.json());
+      el.textContent =
+        (b.headline ?? "") + "\n\nHOTSPOTS\n" +
+        (b.hotspots ?? []).map(h => "• " + h).join("\n") +
+        "\n\nWATCHLIST\n" +
+        (b.watchlist ?? []).map(w => "• " + w).join("\n") +
+        "\n\n" + (b.methods_note ?? "");
+    } catch (e) { el.textContent = "briefing unavailable"; }
+  };
+}
+map.on("load", load);
+</script>
+</body>
+</html>
