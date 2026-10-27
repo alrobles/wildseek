@@ -102,3 +102,44 @@ Si Hermes devuelve un error HTTP 4xx de Meta, no reintentes a ciegas: revisa el 
 es `reasoning_effort` no soportado recuerda que Muse acepta minimal|low|medium|high|xhigh
 (y `max` solo en muse-wonder-1.0 y muse-spark-1.3 estándar).
 ```
+
+---
+
+## Anexo — modelo local GRATIS (muse-glimmer en KU HPC)
+
+Hay un segundo backend, self-hosted, **coste $0**: `muse-glimmer` (30B Q4_K_M,
+Apache-2.0) servido por ollama en 2×Q6000 vía job SLURM, expuesto en
+`http://127.0.0.1:20007/v1`. Úsalo para volumen y baja criticidad; para lo que se
+juzga sigue con muse-wonder-1.0 / muse-spark-1.3 en api.meta.ai.
+
+```bash
+# forma recomendada: el wrapper ya hace todo (health check + flags correctos)
+hermes-glimmer -Q -q "<tarea>"
+hermes-glimmer -Q --yolo -q "usa terminal para inspeccionar pipeline/"
+hermes-glimmer -Q -c devin-local --create-if-missing -q "turno 1"
+
+# equivalente manual
+hermes -p meta-hack chat --provider hpc-glimmer -m muse-glimmer --reasoning none -q "..."
+```
+
+Reglas del endpoint local:
+
+1. **`--reasoning none` es obligatorio en Hermes.** El shim OpenAI de ollama
+   devuelve `400 "muse-glimmer" does not support thinking` si llega `reasoning`
+   o `reasoning_effort`. Hermes los emite porque muse-glimmer figura como
+   reasoning model, y `model_overrides.<provider>.supports_reasoning: false`
+   **no** lo evita (probado). Con `--reasoning none` funciona.
+2. El modelo razona igual: la traza llega en `message.reasoning`, separada de
+   `message.content`. Usa `content` como respuesta.
+3. `max_tokens` generoso (la traza consume presupuesto antes de la respuesta).
+4. Soporta **tool calling** (verificado: `finish_reason: "tool_calls"` con
+   argumentos correctos), así que sirve para trabajo agéntico, no solo chat.
+5. Si no responde: `bash ~/.hermes/scripts/hpc-muse-tunnel-watchdog.sh`
+   (el job rota de nodo cada ~6 h). El wrapper ya comprueba `/v1/models` antes
+   de arrancar y te dice qué hacer.
+6. En el código del proyecto, la vía es `MetaClient.local()` + `MODEL_LOCAL`
+   (contabilidad en $0 ya verificada).
+
+En el mismo endpoint hay además `nemotron-3-super:120b` y `gpt-oss:120b` (ambos
+no chinos, cumplen política). Si el 30B no da la talla en una tarea agéntica
+concreta, prueba esos dos antes de gastar crédito de Meta.
