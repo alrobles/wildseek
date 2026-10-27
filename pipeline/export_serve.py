@@ -171,7 +171,13 @@ def main(src: str, dst: str) -> None:
     for stale in d.glob("suit_*.png*"):
         if stale.name not in keep:
             stale.unlink()
-    meta["n_species"] = len(suits) or None
+    n_cat = None
+    if win.exists():
+        try:
+            n_cat = len(pd.read_csv(win, usecols=["specieskey"]))
+        except Exception:
+            n_cat = None
+    meta["n_species"] = len(suits) or n_cat
     if suits:
         mj = Path(str(suits[0]) + ".meta.json")
         if mj.exists():
