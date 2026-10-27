@@ -67,7 +67,8 @@ def explain(kind: str, ident: str, data_dir: Path | str,
         f = data / "risk_watershed.parquet"
         if f.exists():
             r = con.execute(
-                f"select * from '{f}' where unit ilike '%{ident}%' "
+                f"select * from '{f}' where huc8='{ident}' "
+                f"or name ilike '%{ident}%' "
                 f"order by risk desc limit 5"
             ).fetchdf()
             facts["risk"] = r.to_dict("records")

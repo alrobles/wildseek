@@ -124,8 +124,25 @@ def extract_work(
             response_format=EXTRACTION_SCHEMA,
         )
     except Exception as e:  # noqa: BLE001 — log-and-continue per-work
-        print(f"  ! {work.work_id}: {type(e).__name__} {e}")
-        return []
+        body = getattr(getattr(e, "response", None), "text", "")
+        print(f"  ! {work.work_id}: {type(e).__name__} {e} {body[:300]}")
+        if getattr(e, "response", None) is not None and \
+                e.response.status_code in (400, 413, 422):
+            # Retry once with the abstract truncated hard.
+            retry = INSTRUCTIONS.format(
+                parasite=parasite, parasite_common=parasite_common,
+                title=work.title, abstract=work.abstract[:3000])
+            try:
+                r = client.chat(
+                    [{"role": "user", "content": retry}],
+                    model=model, reasoning_effort="low", max_tokens=4096,
+                    response_format=EXTRACTION_SCHEMA,
+                )
+            except Exception as e2:  # noqa: BLE001
+                print(f"  ! retry {work.work_id}: {type(e2).__name__} {e2}")
+                return []
+        else:
+            return []
     content = r["content"]
     if not content:
         print(f"  ! {work.work_id}: empty content (finish={r['finish_reason']})")

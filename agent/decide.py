@@ -66,6 +66,12 @@ Given one species' fit-diagnostics JSON, emit the action:
 
 Set switch_to to the target family when decision=switch_family else
 "none". Reason <= 200 chars, machine-actionable.
+
+Note: only AMBIGUOUS species reach you — clear winners are auto-accepted
+upstream, so an "accept" here must still be justified by the diagnostics.
+Sparse n (<60), near-tied AIC spreads, marine-dominated ranges, or
+degenerate M are legitimate reasons for flag_review / drop / refit even
+when the scan reports accepted_global.
 """
 
 @dataclass
@@ -78,6 +84,7 @@ class FitSummary:
     best_aic: float | None
     aic_spread_top5: float | None
     flags: dict
+    context: str = ""
 
 
 def decide_species(client: MetaClient, s: FitSummary,
@@ -88,6 +95,8 @@ def decide_species(client: MetaClient, s: FitSummary,
         f"best_aic={s.best_aic}, aic_spread_top5={s.aic_spread_top5}, "
         f"flags={json.dumps(s.flags)}"
     )
+    if s.context:
+        user += f"\ntriage_context={s.context}"
     r = client.chat(
         model=model,
         messages=[

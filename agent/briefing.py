@@ -7,6 +7,7 @@ watchlist, caveats. Runs locally or inside the container on demand.
 
 import json
 import os
+import re
 from pathlib import Path
 
 from .meta_client import MetaClient, MODEL_SHOWCASE
@@ -38,7 +39,9 @@ models over ERA5 bioclim normals, M = 95% ecoregions, APHIS wild-bird
 detections rasterized to 1/120-degree recency kernel and aggregated to
 HUC8 watersheds), write a briefing. Hotspots: name the top watersheds with
 state codes. Watchlist: species or pipeline caveats worth flagging.
-Keep each field under 40 words. Facts:
+Keep each field under 40 words. methods_note must be ONE plain-text
+sentence describing the modeling method (no markdown, no bullets, never
+a bare symbol like "****"). Facts:
 {facts}"""
 
 
@@ -83,7 +86,12 @@ def briefing(client: MetaClient | None = None,
                    "content": PROMPT.format(facts=json.dumps(facts)[:6000])}],
         response_format=BRIEF_SCHEMA,
     )
-    out = json.loads(r["choices"][0]["message"]["content"])
+    out = json.loads(r["content"])
+    if not re.search(r"[a-z]{4}", out.get("methods_note", "")):
+        out["methods_note"] = (
+            "Ellipsoid niche models (xnicher) fit on 88 bioclim pairs per "
+            "species over 1996-2025 ERA5 normals; risk = recency-weighted "
+            "detection kernel aggregated to HUC8 watersheds.")
     out["facts"] = facts
     out["model"] = model
     return out

@@ -34,14 +34,20 @@ def main(src: str, dst: str) -> None:
 
     det = Path(src) / "aphis_wild_birds.parquet"
     if det.exists():
-        con.execute(
-            f"""copy (
-              select lon, lat, state, county, watershed, date_collected
-              from '{det}' where pathogenicity='High Path AI'
-                and lat is not null
-            ) to '{d}/detections.geojson'
-            with (format gdal, driver 'GeoJSON')"""
-        )
+        rows = con.execute(
+            f"""select lon, lat, state, county, watershed, date_collected
+                from '{det}' where pathogenicity='High Path AI'
+                  and lat is not null"""
+        ).fetchall()
+        feats = [{"type": "Feature",
+                  "properties": {"state": r[2], "county": r[3],
+                                 "watershed": r[4], "date": str(r[5])},
+                  "geometry": {"type": "Point",
+                               "coordinates": [r[0], r[1]]}}
+                 for r in rows]
+        (d / "detections.geojson").write_text(json.dumps(
+            {"type": "FeatureCollection", "features": feats}))
+        print("detections:", len(feats))
 
     fly = Path(src) / "aphis_flyways.json"
     if fly.exists():
@@ -49,10 +55,14 @@ def main(src: str, dst: str) -> None:
         gj = {"type": "FeatureCollection", "features": [
             {"type": "Feature",
              "properties": f.get("attributes", {}),
-             "geometry": {"type": "MultiLineString",
-                          "coordinates": f.get("geometry", {}).get("paths", [])}}
+             "geometry": {"type": "MultiPolygon",
+                          "coordinates": [f.get("geometry", {}).get("rings", [])]}}
             for f in feats]}
-        (d / "flyways.geojson").write_text(json.dumps(gj))
+        out = d / "flyways.geojson"
+        out.write_text(json.dumps(gj))
+        assert out.stat().st_size > 1_000_000 and \
+            all(f["geometry"]["coordinates"][0] for f in gj["features"]), \
+            "flyways export produced empty geometries"
 
     meta = {
         "built": time.strftime("%Y-%m-%d %H:%M UTC", time.gmtime()),

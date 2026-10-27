@@ -41,15 +41,15 @@ def main() -> None:
             if win is None:
                 win, tr, H, W = window_for(f)
                 acc = np.zeros((19, win.height, win.width), np.float64)
-                cnt = np.zeros((win.height, win.width), np.int32)
+                cnt = np.zeros((19, win.height, win.width), np.int32)
             with rasterio.open(f) as r:
                 arr = r.read(1, window=win)
             ok = np.isfinite(arr)
             acc[v - 1][ok] += arr[ok]
-            cnt[ok] += 1
+            cnt[v - 1][ok] += 1
         print("year", y, "done", flush=True)
     with np.errstate(invalid="ignore"):
-        mean = (acc / cnt[None]).astype(np.float32)
+        mean = (acc / cnt).astype(np.float32)
     profile = dict(
         driver="GTiff", height=win.height, width=win.width, count=19,
         dtype="float32", crs="EPSG:4326", transform=tr,

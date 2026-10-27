@@ -60,6 +60,17 @@ def main() -> None:
     if a.limit:
         ss = ss[: a.limit]
 
+    out = DATA / f"decisions_{a.cls}.jsonl"
+    done = set()
+    if out.exists():
+        for line in out.read_text().splitlines():
+            try:
+                done.add(json.loads(line)["specieskey"])
+            except Exception:
+                pass
+    ss = [s for s in ss if s.specieskey not in done]
+    print(f"{len(ss)} species pending ({len(done)} already decided)")
+
     client = MetaClient()
     out = DATA / f"decisions_{a.cls}.jsonl"
     delay = 60.0 / a.rpm

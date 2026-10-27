@@ -68,8 +68,8 @@ async function load() {
   }
 
   map.addSource("fly", {type:"geojson", data: SRC+"flyways.geojson"});
-  map.addLayer({id:"flyLine", type:"line", source:"fly",
-    paint:{"line-color":"#8b949e","line-dasharray":[4,2],"line-width":1.5}});
+  map.addLayer({id:"flyLine", type:"fill", source:"fly",
+    paint:{"fill-color":"#58a6ff","fill-opacity":0.10}});
 
   map.addSource("det", {type:"geojson", data: SRC+"detections.geojson"});
   map.addLayer({id:"detPt", type:"circle", source:"det", layout:{visibility:"none"},

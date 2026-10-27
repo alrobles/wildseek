@@ -35,10 +35,21 @@ def q(sql: str) -> list[dict]:
     return con().execute(sql).fetchdf().to_dict("records")
 
 
+def _stamp() -> str | None:
+    m = DATA / "meta.json"
+    if m.exists():
+        try:
+            return json.loads(m.read_text()).get("built")
+        except Exception:
+            return None
+    return None
+
+
 @app.get("/health")
 def health() -> dict:
     ok = (DATA / "fit_catalog.csv").exists()
-    return {"status": "ok" if ok else "empty", "data_dir": str(DATA)}
+    return {"status": "ok" if ok else "empty",
+            "data_dir": str(DATA), "built": _stamp()}
 
 
 @app.get("/species")
@@ -73,7 +84,7 @@ def risk_watershed(top: int = 100) -> list[dict]:
 @app.get("/explain/{kind}/{ident}")
 def explain(kind: str, ident: str) -> JSONResponse:
     """System-1 typed explanation via muse-spark (see agent/explain.py)."""
-    from agent.explain import explain as do_explain
+    from agent.explain import explain as do_explain  # agent pkg, not data
 
     if kind not in ("county", "watershed", "species"):
         raise HTTPException(400, "kind must be county|watershed|species")
@@ -86,8 +97,6 @@ def explain(kind: str, ident: str) -> JSONResponse:
 @app.get("/briefing")
 def briefing() -> JSONResponse:
     """System-2 nightly digest via muse-wonder (see agent/briefing.py)."""
-    import json
-
     baked = DATA / "briefing.json"
     if baked.exists():
         return JSONResponse(json.loads(baked.read_text()))
