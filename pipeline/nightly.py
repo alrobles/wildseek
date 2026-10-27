@@ -153,6 +153,19 @@ def produccion(man):
     print("health:", health[:200])
 
 
+@stage("BRIEFING")
+def briefing_stage(man):
+    """Re-bake the public voice (wonder) over tonight's artifacts.
+    The local app/data mirror is refreshed from staging first so the
+    briefing reads tonight's facts, not yesterday's."""
+    sh(f"rsync -a --delete {ROOT}/data/stage_serve/ "
+       f"{ROOT}/app/data/", timeout=900)
+    print(sh(f"{PY} {ROOT}/pipeline/precompute_agent.py",
+             timeout=1200)[-400:])
+    sh("rsync -a app/data/briefing.json app/data/explain_*.json "
+       f"{TERMINAL}", timeout=300)
+
+
 @stage("BRAIN")
 def brain(man):
     try:
@@ -184,7 +197,8 @@ def main() -> None:
             s(man)
         if not a.dry:
             rest = ([refit] if man["spec"]["stages"].get("refit")
-                    else []) + [builder, approver, produccion]
+                    else []) + [builder, approver, produccion,
+                                briefing_stage]
             for s in rest + [brain]:
                 s(man)
         else:
