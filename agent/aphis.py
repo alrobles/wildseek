@@ -30,6 +30,9 @@ WILD_BIRD_SPECIES = (
     "hpai_wildbirds_usa/FeatureServer/0/query")
 POULTRY = ("https://services1.arcgis.com/jWQlP64OuwDh6GGX/arcgis/rest/"
            "services/hpai_commercial_backyard_usa/FeatureServer/0/query")
+MAMMAL_SPECIES = (
+    "https://services1.arcgis.com/jWQlP64OuwDh6GGX/arcgis/rest/services/"
+    "hpai_mammals_usa/FeatureServer/0/query")
 FLYWAY_ADMIN = f"{BASE}/VS_Wild_Bird_Migratory_Flyways_US_Admin_and_Global/FeatureServer/0/query"
 FLYWAY_GLOBAL = f"{BASE}/VS_Wild_Bird_Migratory_Flyways_US_Admin_and_Global/FeatureServer/1/query"
 
@@ -215,6 +218,25 @@ def wild_bird_species(limit: int | None = None) -> list[SpeciesDetection]:
             woah=a.get("WOAH_Classification") or "",
             lon=g.get("x"), lat=g.get("y"),
         ))
+    return out
+
+
+def mammal_species(limit: int | None = None) -> list[dict]:
+    """HPAI mammal detections (OSU mirror layer) — Species/LAT_X/LON_Y."""
+    out = []
+    for f in _query(MAMMAL_SPECIES, "1=1", limit, "ObjectId ASC"):
+        a, g = f["attributes"], f.get("geometry") or {}
+        out.append({
+            "State": a.get("State") or "",
+            "County": a.get("County") or "",
+            "County_FIPS": a.get("County_FIPS"),
+            "Date_Detected": _ms(
+                a.get("Date_Detected") or a.get("Date_Collected")),
+            "HPAI_Strain": a.get("HPAI_Strain") or "",
+            "Species": a.get("Species") or "",
+            "lon": g.get("x") if g else a.get("LON_Y"),
+            "lat": g.get("y") if g else a.get("LAT_X"),
+        })
     return out
 
 

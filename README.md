@@ -81,3 +81,22 @@ work submitted here was built during Oct 26 – Nov 4, 2026.
 | `data/` | Local artifacts (gitignored) |
 | `papers/` | Reference papers |
 | `docs/` | `meta-api.md` (API facts/pricing), `data-sources.md` (endpoints) |
+
+## The Factory (nightly autonomous loop)
+
+WildSeek runs as a risk-intelligence factory (`pipeline/nightly.py`,
+constitution in `docs/FACTORY.md`):
+
+```
+ENTRADA    fetch_aphis -> fresh APHIS detections/species/flocks
+SPEC       agent/planner.py -> run_spec.json (delta: new species -> refit)
+REFIT      (condicional) labels -> dist_frame -> suscept_model
+BUILDER    kuhpc: build_risk -> watershed -> county_exposure -> render -> export
+APPROVER   agent/qa.py: quorum 3/4 (codigo/seguridad/ux/brain=spark)
+PRODUCCION rsync -> terminal -> wildseek.ecoseek.org + /health
+BRAIN      run manifest + glimmer (MI210, local) shift log
+SELF-HEAL  stage failure -> `muse exec` patches -> one retry
+```
+
+Routine refreshes deploy direct; susceptibility refits flag
+`needs_human_release` (PR gate -> public repo via `scripts/release.sh`).

@@ -44,6 +44,17 @@ def main() -> None:
     (OUT / "aphis_flyways.json").write_text(json.dumps(fly))
     print("flyways:", len(fly))
 
+    det_sp = [dataclasses.asdict(d) for d in aphis.wild_bird_species()]
+    df4 = pd.DataFrame(det_sp)
+    df4.to_parquet(OUT / "aphis_wild_birds_species.parquet", index=False)
+    print("wild_birds species-level:", len(df4),
+          "| species:", df4["bird_species"].nunique())
+
+    df5 = pd.DataFrame(aphis.mammal_species())
+    df5.to_parquet(OUT / "aphis_mammals_species.parquet", index=False)
+    print("mammal species-level:", len(df5),
+          "| species:", df5["Species"].nunique())
+
 
 if __name__ == "__main__":
     main()
