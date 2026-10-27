@@ -31,7 +31,7 @@ TREE=$(git write-tree)
 unset GIT_INDEX_FILE
 
 # --- diff vs el tip publico (tambien filtrado) ---------------------------
-git fetch -q public main || true
+git fetch -q -p public || true
 BASE=$(git rev-parse -q --verify public/main 2>/dev/null \
     || git hash-object -t tree /dev/null)
 git diff "$BASE" "$TREE" > /tmp/wildseek-release.diff
@@ -82,5 +82,11 @@ fi
 
 MSG="release ${STAMP} (${SLUG}) — $(git rev-parse --short HEAD)"
 COMMIT=$(git commit-tree "$TREE" -m "$MSG")
-git push --force-with-lease public "$COMMIT:refs/heads/main"
+# fresh/recreated remote: no main to lease against -> plain create;
+# otherwise force-with-lease guards against unexpected remote moves
+if git rev-parse -q --verify public/main >/dev/null 2>&1; then
+    git push --force-with-lease public "$COMMIT:refs/heads/main"
+else
+    git push public "$COMMIT:refs/heads/main"
+fi
 echo "soltado a public/main (${COMMIT:0:8}, arbol curado sin historial)"
