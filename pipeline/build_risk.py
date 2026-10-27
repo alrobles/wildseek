@@ -56,33 +56,22 @@ def main() -> None:
     print("risk_detect_1120:", int(ok.sum()), "detections rasterized,",
           "max", float(np.nanmax(surf)))
 
-    # Stage 2: mean suitability across Aves winners -> risk x susceptibility
-    win = pd.read_csv(f"{OUT}/species_winner.csv")
-    pool = pd.read_csv(f"{OUT}/pool_flagship.csv")
-    aves = set(pool.loc[pool["class"] == "Aves", "specieskey"])
-    wins = [k for k in win["specieskey"] if k in aves]
-    acc = np.zeros((H, W), np.float64)
-    n = 0
-    for k in wins:
-        p = f"{OUT}/suit/suit_{k}.tif"
-        if not os.path.exists(p):
-            continue
-        with rasterio.open(p) as ds:
-            a = ds.read(1)
-            if a.shape != (H, W):
-                continue
-            acc += np.where(np.isfinite(a), a, 0)
-            n += 1
-    if n:
-        mean_suit = (acc / n).astype(np.float32)
-        risk = surf * mean_suit
-        if np.nanmax(risk) > 0:
-            risk = risk / np.nanmax(risk)
-        np.save(f"{OUT}/mean_suit_aves_1120.npy", mean_suit)
-        with rasterio.open(f"{OUT}/risk_1120.tif", "w", **prof) as d:
-            d.write(risk.astype(np.float32), 1)
-        print("risk_1120:", n, "aves suit layers averaged; max",
-              float(np.nanmax(risk)))
+    # Stage 2: detection pressure x reservoir community.
+    # reservoir_sum = sum_i p_host_i * suit_i (all classes, M-masked,
+    # built by build_reservoir.py) — replaces the older unweighted
+    # Aves-mean suitability.
+    with rasterio.open(f"{OUT}/reservoir/reservoir_sum.tif") as ds:
+        rsv = ds.read(1).astype(np.float32)
+        assert rsv.shape == (H, W), f"reservoir grid mismatch {rsv.shape}"
+    rsv_norm = rsv / np.nanmax(rsv) if np.nanmax(rsv) > 0 else rsv
+    risk = surf * np.where(np.isfinite(rsv_norm), rsv_norm, 0)
+    if np.nanmax(risk) > 0:
+        risk = risk / np.nanmax(risk)
+    np.save(f"{OUT}/reservoir_norm_1120.npy", rsv_norm)
+    with rasterio.open(f"{OUT}/risk_1120.tif", "w", **prof) as d:
+        d.write(risk.astype(np.float32), 1)
+    print("risk_1120: detection x reservoir_sum; max",
+          float(np.nanmax(risk)))
 
 
 if __name__ == "__main__":
