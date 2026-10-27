@@ -25,8 +25,10 @@ and live **outside** this repo — listed here explicitly.
 | `era5_bioclim` collection | lab beegfs | annual bioclim GeoTIFFs the env cube + normals derive from |
 | ecoseek stack + geoseek | `ecoseek.org` | deployment platform WildSeek runs on; own EO embeddings (Clay-style leg) |
 | `xsdm_pipeline` `.sif` | KU HPC | R/terra/duckdb container the campaign runs under |
-| mammal tree (`phylogenyAI`) | lab beegfs | phylo leg of the susceptibility score |
-| 3-distance susceptibility concept | lab PNAS framework | the scientific framing the product implements |
+| mammal tree (`v6_point.nwk`, phyloseek) | lab infra | dated mammal phylogeny — phylo leg of the susceptibility score |
+| BirdTree Stage2 Ericson posterior | data.vertlife.org (public) | bird phylogeny — 1,048-tree set, consensus for patristic distances |
+| `BLIOCPhyloMasterTax.csv` / AVONET Suppl. 1 | birdtree.org / figshare (public) | tree taxonomy + BirdLife↔eBird↔BirdTree crosswalks for name reconciliation |
+| 3-distance susceptibility concept | lab PNAS framework (doi.org/10.1073/pnas.2122851119) | the scientific framing the product implements |
 | APHIS / USGS WBD / OpenAlex | public services | detection points, watershed boundaries, literature |
 
 The hackathon contribution is the **assembly**: M construction per
