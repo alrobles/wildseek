@@ -18,7 +18,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 
-DATA = Path(os.environ.get("DATA_DIR", "data/serve"))
+DATA = Path(os.environ.get("DATA_DIR", "app/data"))
 
 app = FastAPI(title="WildSeek", version="0.1.0")
 
