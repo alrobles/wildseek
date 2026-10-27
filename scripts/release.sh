@@ -56,8 +56,11 @@ $(cat /tmp/wildseek-release.diff)
 EOF
     if hermes -p meta-hack chat -Q -m muse-spark-1.3 --query-file "$PROMPT" \
         | tee "$OUT"; then
-        if grep -qiE '\bNO[- ]?SHIP\b' "$OUT"; then VERDICT=NO-SHIP
-        elif grep -qiE '\bSHIP\b' "$OUT"; then VERDICT=SHIP; fi
+        # anchor on the verdict line only — the body may quote older
+        # NO-SHIP verdicts and plain SHIP is a substring of NO-SHIP
+        VLINE=$(grep -iE 'veredicto|verdict' "$OUT" | tail -1 || true)
+        if echo "$VLINE" | grep -qiE 'NO[- ]?SHIP'; then VERDICT=NO-SHIP
+        elif echo "$VLINE" | grep -qi 'SHIP'; then VERDICT=SHIP; fi
     else
         echo "muse cayo; review incompleta en $OUT" | tee -a "$OUT"
     fi

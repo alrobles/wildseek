@@ -21,10 +21,11 @@ import os
 import duckdb
 import time
 
+_USER = os.environ.get("USER", "")
 DB = os.environ.get(
     "WILDSEEK_GBIF_DB",
-    f"/kuhpc/work/kbs/{os.environ.get('USER', '')}/gbifdata/"
-    "gbif_thinned_120.duckdb")
+    f"/kuhpc/work/kbs/{_USER}/gbifdata/gbif_thinned_120.duckdb"
+    if _USER else "")
 OUT = os.environ.get("WILDSEEK_BEEG", ".")
 CLASSES = ["Mammalia", "Aves"]
 MIN_YEAR, MAX_YEAR = 1996, 2025
@@ -43,6 +44,7 @@ def base(cls: str) -> str:
 
 
 def main() -> None:
+    assert DB, "set WILDSEEK_GBIF_DB to the gbif_thinned_120.duckdb path"
     con = duckdb.connect(DB, read_only=True)
     con.execute("PRAGMA threads=8; PRAGMA memory_limit='40GB'")
     t0 = time.time()

@@ -14,6 +14,8 @@ B="${WILDSEEK_BEEG:?set WILDSEEK_BEEG to the staging dir}"
 export R_LIBS="${WILDSEEK_RLIBS:-$(dirname "$B")/rlib_442}"
 SIF="${WILDSEEK_SIF:-$HOME/geospatial-rserver/xsdm_latest.sif}"
 N_SHARDS=${N_SHARDS:-1}
+# bind the parallel-FS root (grandparent of the staging dir) so the
+# container sees $B and the sibling R_LIBS tree
 apptainer exec --cleanenv --env R_LIBS="$R_LIBS" \
   --env WILDSEEK_BEEG="$B" \
   --bind "$(dirname "$(dirname "$B")")" "$SIF" \

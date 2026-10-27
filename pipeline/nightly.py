@@ -162,9 +162,15 @@ def builder(man):
        f"{KUHPC}:{beeg}/", timeout=300)
     refit_on = man["spec"]["stages"].get("refit")
     script = "nightly_refit.sbatch" if refit_on else "nightly.sbatch"
+    # logs/ must exist before submit — relative #SBATCH --output resolves
+    # against the submit cwd at job start, slurm won't create it
+    sh(f"ssh {KUHPC} 'mkdir -p {beeg}/logs'", timeout=60)
     job = sh(f"ssh {KUHPC} 'cd {beeg} && sbatch --parsable "
              f"--export=ALL,WILDSEEK_BEEG={beeg} {script}'", timeout=120)
-    jobid = job.strip().split()[-1].split(";")[0]
+    toks = job.strip().split()
+    jobid = toks[-1].split(";")[0] if toks else ""
+    if not jobid.isdigit():
+        raise RuntimeError(f"sbatch returned no jobid: {job[:200]}")
     print("submitted job", jobid, flush=True)
     state = wait_slurm(jobid)
     man["stages"].setdefault("slurm", {})[script] = \

@@ -58,8 +58,8 @@ def species(limit: int = 200, cls: str | None = None) -> list[dict]:
     if not f.exists():
         raise HTTPException(503, "catalog not exported yet")
     sus = DATA / "susceptibility.parquet"
-    w = (f"and lower(species) like "
-         f"'%{cls.lower().replace("'", "''")}%'") if cls else ""
+    esc = cls.lower().replace("'", "''") if cls else ""
+    w = f"and lower(species) like '%{esc}%'" if esc else ""
     where = f"where 1=1 {w}" if w else ""
     if sus.exists():
         return q(f"select w.*, s.p_host, s.p05, s.p95, s.label as host_label "
