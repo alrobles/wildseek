@@ -5,6 +5,7 @@ meta-key
 
 # data artifacts (large / reproducible)
 data/
+app/data/
 *.tif
 *.parquet
 

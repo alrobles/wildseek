@@ -16,7 +16,7 @@ from agent.briefing import briefing  # noqa: E402
 from agent.explain import explain  # noqa: E402
 from agent.meta_client import MetaClient  # noqa: E402
 
-DATA = Path(__file__).resolve().parent.parent / "data" / "serve"
+DATA = Path(__file__).resolve().parent.parent / "app" / "data"
 
 
 def main() -> None:
