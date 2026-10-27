@@ -22,6 +22,8 @@ n_shards  <- as.integer(args[3])
 n_starts  <- if (length(args) >= 4) as.integer(args[4]) else 60L
 
 OUT   <- Sys.getenv("WILDSEEK_BEEG", ".")
+DOM   <- Sys.getenv("WILDSEEK_DOMAIN", "conus")
+SUF   <- ifelse(DOM == "conus", "", paste0("_", DOM))
 TEMPS <- paste0("bio", sprintf("%02d", 1:11))
 PRECS <- paste0("bio", sprintf("%02d", 12:19))
 PAIRS <- expand.grid(temp = TEMPS, prec = PRECS, stringsAsFactors = FALSE)
@@ -30,8 +32,8 @@ con <- dbConnect(duckdb())
 dbExecute(con, "PRAGMA threads=4")
 
 pool <- dbGetQuery(con, sprintf(
-  "select * from '%s/pool_flagship.csv' where class='%s'",
-  OUT, if (cls == "mammalia") "Mammalia" else "Aves"))
+  "select * from '%s/pool_flagship%s.csv' where class='%s'",
+  OUT, SUF, if (cls == "mammalia") "Mammalia" else "Aves"))
 idx <- which(pool$specieskey %% n_shards == shard)
 pool <- pool[idx, , drop = FALSE]
 cat("cls", cls, "shard", shard, "species:", nrow(pool), "\n")

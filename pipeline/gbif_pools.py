@@ -17,6 +17,7 @@ CONUS bbox: lat 24-49.5, lon -125 to -66 (lower 48 + margins).
 """
 
 import os
+import sys
 
 import duckdb
 import time
@@ -27,11 +28,17 @@ DB = os.environ.get(
     f"/kuhpc/work/kbs/{_USER}/gbifdata/gbif_thinned_120.duckdb"
     if _USER else "")
 OUT = os.environ.get("WILDSEEK_BEEG", ".")
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import domain
+DOM = domain.name()
+SUF = domain.suffix()
+_B = domain.get()["bbox"]
+MIN_CELLS = domain.get()["min_cells"]
 CLASSES = ["Mammalia", "Aves"]
 MIN_YEAR, MAX_YEAR = 1996, 2025
 CONUS = (
-    "decimallatitude between 24 and 49.5 "
-    "and decimallongitude between -125 and -66"
+    f"decimallatitude between {_B[1]} and {_B[3]} "
+    f"and decimallongitude between {_B[0]} and {_B[2]}"
 )
 
 
@@ -62,13 +69,13 @@ def main() -> None:
                  count(distinct floor(o.lat_120*4)/4 || '|' ||
                                floor(o.lon_120*4)/4) n_cells_global,
                  count(distinct case when not (
-                     o.decimallatitude between 24 and 49.5 and
-                     o.decimallongitude between -125 and -66)
+                     o.decimallatitude between {_B[1]} and {_B[3]} and
+                     o.decimallongitude between {_B[0]} and {_B[2]})
                    then floor(o.lat_120*4)/4 || '|' || floor(o.lon_120*4)/4
                  end) n_cells_outside
           from conus c join occ o using (species)
           group by 1, 2
-        ) to '{OUT}/species_cell_counts.csv' (header, delimiter ',')"""
+        ) to '{OUT}/species_cell_counts{SUF}.csv' (header, delimiter ',')"""
     )
     print("counts", round(time.time() - t0), "s")
 
@@ -78,7 +85,7 @@ def main() -> None:
                       decimallongitude lon, lat_120, lon_120, year,
                       basisofrecord
               {base(cls)} and {CONUS})
-            to '{OUT}/occ_conus_{cls.lower()}_1120.parquet'
+            to '{OUT}/occ_{DOM}_{cls.lower()}_1120.parquet'
             (format parquet, compression zstd)"""
         )
         print("conus", cls, round(time.time() - t0), "s")
@@ -99,17 +106,17 @@ def main() -> None:
     # Pool tables from the counts CSV.
     con2 = duckdb.connect()
     con2.execute("PRAGMA threads=8")
-    counts = f"'{OUT}/species_cell_counts.csv'"
+    counts = f"'{OUT}/species_cell_counts{SUF}.csv'"
     con2.execute(
-        f"""copy (select * from {counts} where n_cells_conus >= 100)
-            to '{OUT}/pool_flagship.csv' (header, delimiter ',')"""
+        f"""copy (select * from {counts} where n_cells_conus >= {MIN_CELLS})
+            to '{OUT}/pool_flagship{SUF}.csv' (header, delimiter ',')"""
     )
     con2.execute(
         f"""copy (select * from {counts}
-                where n_cells_conus >= 100 and n_cells_outside = 0)
-            to '{OUT}/pool_conus_endemic.csv' (header, delimiter ',')"""
+                where n_cells_conus >= {MIN_CELLS} and n_cells_outside = 0)
+            to '{OUT}/pool_{DOM}_endemic.csv' (header, delimiter ',')"""
     )
-    for t in ["pool_flagship", "pool_conus_endemic"]:
+    for t in [f"pool_flagship{SUF}", f"pool_{DOM}_endemic"]:
         print(t, con2.execute(
             f"select class, count(*) from '{OUT}/{t}.csv' group by 1"
         ).fetchall())

@@ -18,5 +18,6 @@ N_SHARDS=${N_SHARDS:-1}
 # container sees $B and the sibling R_LIBS tree
 apptainer exec --cleanenv --env R_LIBS="$R_LIBS" \
   --env WILDSEEK_BEEG="$B" \
+  --env WILDSEEK_DOMAIN="${WILDSEEK_DOMAIN:-conus}" \
   --bind "$(dirname "$(dirname "$B")")" "$SIF" \
   Rscript "$B/predict_suit.R" "$SLURM_ARRAY_TASK_ID" "$N_SHARDS"

@@ -15,6 +15,7 @@ Runs under SLURM (grid math, not login node).
 """
 
 import os
+import sys
 
 import numpy as np
 import pandas as pd
@@ -22,6 +23,9 @@ import rasterio
 from scipy.ndimage import gaussian_filter
 
 OUT = os.environ.get("WILDSEEK_BEEG", ".")
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import domain
+DOM = domain.name()
 HALF_LIFE_D = 90.0          # detection recency half-life (days)
 SIGMA_CELLS = 12.0          # ~10 km at 1/120 deg
 
@@ -34,7 +38,7 @@ def main() -> None:
     age = (det["date_collected"].max() - det["date_collected"]).dt.days
     det["w"] = 0.5 ** (age / HALF_LIFE_D)
 
-    with rasterio.open(f"{OUT}/env_conus_normals_1120.tif") as r:
+    with rasterio.open(f"{OUT}/env_{DOM}_normals_1120.tif") as r:
         tr, H, W = r.transform, r.height, r.width
         nodata_mask = ~np.isfinite(r.read(1))
     col = ((det["lon"] - tr.c) / tr.a).astype(int)

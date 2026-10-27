@@ -6,6 +6,7 @@ Bin lookup via direct array indexing (no merge): bins are small ints
 O(1) per query.
 """
 import os
+import sys
 
 import numpy as np
 import pandas as pd
@@ -13,6 +14,9 @@ import rasterio
 from rasterio.transform import from_bounds
 
 OUT = os.environ.get("WILDSEEK_BEEG", ".")
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import domain
+DOM = domain.name()
 
 
 def main():
@@ -23,7 +27,7 @@ def main():
         eco.eco_id.to_numpy()
     print("eco cells:", int((lut >= 0).sum()))
 
-    with rasterio.open(f"{OUT}/env_conus_normals_1120.tif") as ds:
+    with rasterio.open(f"{OUT}/env_{DOM}_normals_1120.tif") as ds:
         H, W, bounds = ds.height, ds.width, ds.bounds
         prof = ds.profile.copy()
 
@@ -40,9 +44,9 @@ def main():
     print("matched frac:", float((out >= 0).mean()))
 
     prof.update(count=1, dtype="int32", nodata=-1)
-    with rasterio.open(f"{OUT}/eco_conus_1120.tif", "w", **prof) as ds:
+    with rasterio.open(f"{OUT}/eco_{DOM}_1120.tif", "w", **prof) as ds:
         ds.write(out, 1)
-    print("wrote eco_conus_1120.tif", out.shape)
+    print(f"wrote eco_{DOM}_1120.tif", out.shape)
 
 
 if __name__ == "__main__":

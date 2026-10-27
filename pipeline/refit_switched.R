@@ -11,13 +11,15 @@ suppressMessages({
   library(duckdb); library(DBI); library(xnicher)
 })
 OUT <- Sys.getenv("WILDSEEK_BEEG", ".")
+DOM <- Sys.getenv("WILDSEEK_DOMAIN", "conus")
+SUF <- ifelse(DOM == "conus", "", paste0("_", DOM))
 n_starts <- 60L
 
 con <- dbConnect(duckdb()); dbExecute(con, "PRAGMA threads=4")
 q <- read.csv(sprintf("%s/refit_queue.csv", OUT), stringsAsFactors = FALSE)
 win <- dbGetQuery(con, sprintf(
   "select w.*, p.class from '%s/species_winner.csv' w
-   join '%s/pool_flagship.csv' p using (specieskey)", OUT, OUT))
+   join '%s/pool_flagship%s.csv' p using (specieskey)", OUT, OUT, SUF))
 q <- merge(q, win, by = "specieskey")
 cat("refit queue:", nrow(q), "\n")
 

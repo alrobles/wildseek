@@ -13,17 +13,19 @@ args <- commandArgs(trailingOnly = TRUE)
 shard <- as.integer(args[1]); n_shards <- as.integer(args[2])
 n_starts <- 60L
 OUT <- Sys.getenv("WILDSEEK_BEEG", ".")
+DOM <- Sys.getenv("WILDSEEK_DOMAIN", "conus")
+SUF <- ifelse(DOM == "conus", "", paste0("_", DOM))
 bios <- paste0("bio", sprintf("%02d", 1:19))
 
 con <- dbConnect(duckdb()); dbExecute(con, "PRAGMA threads=4")
 win <- dbGetQuery(con, sprintf(
   "select w.*, p.class from '%s/species_winner.csv' w
-   join '%s/pool_flagship.csv' p using (specieskey)", OUT, OUT))
+   join '%s/pool_flagship%s.csv' p using (specieskey)", OUT, OUT, SUF))
 win <- win[win$specieskey %% n_shards == shard, ]
 cat("shard", shard, "species:", nrow(win), "\n")
 
-norm <- rast(sprintf("%s/env_conus_normals_1120.tif", OUT))
-eco_r <- rast(sprintf("%s/eco_conus_1120.tif", OUT))
+norm <- rast(sprintf("%s/env_%s_normals_1120.tif", OUT, DOM))
+eco_r <- rast(sprintf("%s/eco_%s_1120.tif", OUT, DOM))
 
 bc <- function(x, lam, eps) if (abs(lam) < 1e-8) log(x + eps) else ((x + eps)^lam - 1) / lam
 bc_lambda <- function(x) {
