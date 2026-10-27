@@ -228,7 +228,7 @@ def briefing_stage(man):
 def brain(man):
     try:
         sys.path.insert(0, str(ROOT))
-        from agent.meta_client import MetaClient, MODEL_LOCAL
+        from agent.meta_client import MODEL_LOCAL, MetaClient
         c = MetaClient.local_mi210()
         r = c.chat([{"role": "user", "content":
                    "Eres el shift-log de una fabrica de inteligencia de "

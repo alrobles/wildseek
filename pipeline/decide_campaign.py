@@ -16,8 +16,8 @@ from pathlib import Path
 import pandas as pd
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-from agent.decide import FitSummary, decide_species  # noqa: E402
-from agent.meta_client import MetaClient, MODEL_AGENT  # noqa: E402
+from agent.decide import FitSummary, decide_species
+from agent.meta_client import MetaClient
 
 DATA = Path(__file__).resolve().parent.parent / "data"
 
@@ -31,8 +31,8 @@ def summaries(cat: pd.DataFrame) -> list[FitSummary]:
         out.append(FitSummary(
             specieskey=int(key), species=sp,
             n_cells=int(g["nobs"].max()),
-            n_pairs_tried=int(len(g)),
-            n_accepted=int(len(ok)),
+            n_pairs_tried=len(g),
+            n_accepted=len(ok),
             best_aic=float(aics.min()) if len(aics) else None,
             aic_spread_top5=float(aics.max() - aics.min())
             if len(aics) > 1 else None,
@@ -49,7 +49,6 @@ def main() -> None:
     a = p.parse_args()
 
     cat = pd.read_csv(a.cat)
-    cls = "Aves" if a.cls == "aves" else "Mammalia"
     cls_file = DATA / f"env_occ_{a.cls}.parquet"
     keys = None
     if cls_file.exists():
@@ -63,11 +62,12 @@ def main() -> None:
     out = DATA / f"decisions_{a.cls}.jsonl"
     done = set()
     if out.exists():
-        for line in out.read_text().splitlines():
+        for i, line in enumerate(out.read_text().splitlines()):
             try:
                 done.add(json.loads(line)["specieskey"])
-            except Exception:
-                pass
+            except (ValueError, KeyError) as ex:
+                print(f"warn: skip bad jsonl line {i}: {ex}",
+                      file=sys.stderr)
     ss = [s for s in ss if s.specieskey not in done]
     print(f"{len(ss)} species pending ({len(done)} already decided)")
 

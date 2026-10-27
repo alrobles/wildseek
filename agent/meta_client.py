@@ -48,7 +48,7 @@ class Usage:
     reasoning_tokens: int = 0
 
     @classmethod
-    def from_response(cls, u: dict) -> "Usage":
+    def from_response(cls, u: dict) -> Usage:
         d = (u or {}).get("completion_tokens_details") or {}
         p = (u or {}).get("prompt_tokens_details") or {}
         return cls(
@@ -93,13 +93,13 @@ class MetaClient:
         self._http.headers["Authorization"] = f"Bearer {self.key}"
 
     @classmethod
-    def local(cls) -> "MetaClient":
+    def local(cls) -> MetaClient:
         """Self-hosted Muse Glimmer on KU HPC (free). Requires the ssh
         tunnel on :20007 (kept alive by a user-level watchdog job)."""
         return cls(api_key="ollama", base_url=LOCAL_BASE_URL)
 
     @classmethod
-    def local_mi210(cls) -> "MetaClient":
+    def local_mi210(cls) -> MetaClient:
         """Self-hosted Muse Glimmer on a MI210 via llama.cpp rocm (~44 tok/s).
         Tunnel on :20009 (watchdog-maintained).
         Falls back to the staggered instance on :20010 on connection error."""

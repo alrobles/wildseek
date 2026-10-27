@@ -18,9 +18,9 @@ CONUS bbox: lat 24-49.5, lon -125 to -66 (lower 48 + margins).
 
 import os
 import sys
+import time
 
 import duckdb
-import time
 
 _USER = os.environ.get("USER", "")
 DB = os.environ.get(
@@ -30,6 +30,7 @@ DB = os.environ.get(
 OUT = os.environ.get("WILDSEEK_BEEG", ".")
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import domain
+
 DOM = domain.name()
 SUF = domain.suffix()
 _B = domain.get()["bbox"]

@@ -11,7 +11,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-from agent import aphis  # noqa: E402
+from agent import aphis
 
 OUT = Path(__file__).resolve().parent.parent / "data"
 

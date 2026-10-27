@@ -46,7 +46,7 @@ class HostList:
         self.entries = entries or {}
 
     @classmethod
-    def load(cls, path: str | Path) -> "HostList":
+    def load(cls, path: str | Path) -> HostList:
         p = Path(path)
         entries: dict[str, dict] = {}
         if p.exists():

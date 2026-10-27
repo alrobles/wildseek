@@ -15,6 +15,7 @@ peak memory stays ~1 GB. NaN stays NaN. Runs under SLURM.
 import glob
 import os
 import sys
+
 import numpy as np
 import rasterio
 from rasterio.windows import from_bounds
@@ -22,6 +23,7 @@ from rasterio.windows import from_bounds
 OUT = os.environ.get("WILDSEEK_BEEG", ".")
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import domain
+
 DOM = domain.name()
 SUF = domain.suffix()
 _B = domain.get()["bbox"]

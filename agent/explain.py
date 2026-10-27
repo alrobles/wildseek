@@ -11,7 +11,7 @@ import json
 import os
 from pathlib import Path
 
-from .meta_client import MetaClient, MODEL_AGENT
+from .meta_client import MODEL_AGENT, MetaClient
 
 EXPLAIN_SCHEMA = {
     "type": "json_schema",

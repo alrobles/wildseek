@@ -25,6 +25,7 @@ from scipy.ndimage import gaussian_filter
 OUT = os.environ.get("WILDSEEK_BEEG", ".")
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import domain
+
 DOM = domain.name()
 HALF_LIFE_D = 90.0          # detection recency half-life (days)
 SIGMA_CELLS = 12.0          # ~10 km at 1/120 deg

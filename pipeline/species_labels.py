@@ -37,7 +37,7 @@ USAGE = "https://api.gbif.org/v1/species"
 AVES_KEY = 212      # highertaxon_key restricting search to birds
 MAMMALIA_KEY = 359  # mammals (HPAI mammal-detections layer)
 GROUP_RANKS = ("GENUS", "FAMILY", "ORDER")
-UNID = re.compile(r"\s*\(unidentified\)\s*$", re.I)
+UNID = re.compile(r"\s*\(unidentified\)\s*$", re.IGNORECASE)
 
 
 def norm(s):
@@ -63,7 +63,7 @@ def variants(name):
 
 def hybridish(x):
     sn = f"{x.get('scientificName') or ''} {x.get('canonicalName') or ''}"
-    return bool(re.search(r"\s(?:x|×)\s|\bhybrid\b", sn, re.I))
+    return bool(re.search(r"\s(?:x|×)\s|\bhybrid\b", sn, re.IGNORECASE))
 
 
 def get_json(url, params=None, tries=3):

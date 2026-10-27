@@ -8,9 +8,10 @@ watchlist, caveats. Runs locally or inside the container on demand.
 import json
 import os
 import re
+import sys
 from pathlib import Path
 
-from .meta_client import MetaClient, MODEL_SHOWCASE
+from .meta_client import MODEL_SHOWCASE, MetaClient
 
 BRIEF_SCHEMA = {
     "type": "json_schema",
@@ -99,8 +100,8 @@ def facts(data_dir: Path | str) -> dict:
                      for d in tds if d.get("decision") == "flag_review"]
             facts["flagged_species"] = (
                 facts.get("flagged_species", []) + tflag)[:10]
-        except Exception:
-            pass
+        except (OSError, ValueError) as ex:
+            print(f"warn: tail jsonl unreadable: {ex}", file=sys.stderr)
     else:
         delta = data / "decisions_delta.csv"
         if delta.exists():
@@ -116,8 +117,8 @@ def facts(data_dir: Path | str) -> dict:
                          if r.get("decision") == "flag_review"]
                 facts["flagged_species"] = (
                     facts.get("flagged_species", []) + tflag)[:10]
-            except Exception:
-                pass
+            except (OSError, ValueError, csv.Error) as ex:
+                print(f"warn: delta csv unreadable: {ex}", file=sys.stderr)
     if "flagged_species" not in facts:
         facts["flagged_species"] = []
     con.close()

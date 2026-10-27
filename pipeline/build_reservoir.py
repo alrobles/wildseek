@@ -10,7 +10,6 @@ Three accumulation rules over the M-masked suit_<key>.tif stack:
 Pixels outside every species' M stay NaN.
 """
 import os
-import sys
 from pathlib import Path
 
 import numpy as np

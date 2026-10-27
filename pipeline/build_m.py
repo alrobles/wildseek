@@ -20,8 +20,9 @@ DuckDB-only; runs on the login node in minutes. To run as an array:
 
 import argparse
 import os
-import duckdb
 import time
+
+import duckdb
 
 OUT = os.environ.get("WILDSEEK_BEEG", ".")
 CLASSES = ["mammalia", "aves"]

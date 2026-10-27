@@ -16,7 +16,7 @@ from PIL import Image
 
 
 def cmap_ramp(v: np.ndarray, name: str) -> np.ndarray:
-    import matplotlib.cm as cm
+    from matplotlib import cm
     return (cm.get_cmap(name)(v) * 255).astype("uint8")
 
 

@@ -14,10 +14,10 @@ import re
 import sys
 from pathlib import Path
 
-from .meta_client import MetaClient, MODEL_EXTRACTION
-from .lit_search import search
 from .extract import extract_batch
 from .host_list import HostList
+from .lit_search import search
+from .meta_client import MODEL_EXTRACTION, MetaClient
 from .resolve import resolve_host_list
 
 DATA_DIR = Path(__file__).resolve().parent.parent / "data"

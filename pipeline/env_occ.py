@@ -15,8 +15,9 @@ Runs under SLURM (no login-node compute).
 
 import os
 import sys
-import duckdb
 import time
+
+import duckdb
 
 OUT = os.environ.get("WILDSEEK_BEEG", ".")
 NORM = f"'{OUT}/env_normals_96_25.parquet'"

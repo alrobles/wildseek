@@ -21,11 +21,11 @@ Phases (run any subset):
 import argparse
 import glob
 import os
+import time
 
 import duckdb
 import numpy as np
 import rasterio
-import time
 
 OUT = os.environ.get("WILDSEEK_BEEG", ".")
 # era5 bioclim store: sibling dir of the staging root unless overridden

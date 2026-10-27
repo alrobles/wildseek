@@ -18,13 +18,17 @@ import numpy as np
 import rasterio
 from PIL import Image
 from rasterio.crs import CRS
-from rasterio.warp import Resampling, calculate_default_transform, reproject
 from rasterio.transform import array_bounds
-from rasterio.warp import transform_bounds
+from rasterio.warp import (
+    Resampling,
+    calculate_default_transform,
+    reproject,
+    transform_bounds,
+)
 
 
 def render(tif, png, cmap, vmax):
-    import matplotlib.cm as cm
+    from matplotlib import cm
     with rasterio.open(tif) as src:
         dst_crs = CRS.from_epsg(3857)
         tr, w, h = calculate_default_transform(

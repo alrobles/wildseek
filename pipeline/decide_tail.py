@@ -36,8 +36,8 @@ from pathlib import Path
 import pandas as pd
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-from agent.decide import FitSummary, decide_species  # noqa: E402
-from agent.meta_client import MetaClient  # noqa: E402
+from agent.decide import FitSummary, decide_species
+from agent.meta_client import MetaClient
 
 DATA = Path(__file__).resolve().parent.parent / "data"
 

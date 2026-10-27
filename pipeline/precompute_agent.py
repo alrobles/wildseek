@@ -12,9 +12,9 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-from agent.briefing import briefing  # noqa: E402
-from agent.explain import explain  # noqa: E402
-from agent.meta_client import MetaClient  # noqa: E402
+from agent.briefing import briefing
+from agent.explain import explain
+from agent.meta_client import MetaClient
 
 DATA = Path(__file__).resolve().parent.parent / "app" / "data"
 

@@ -11,10 +11,10 @@ synced from the cluster staging dir ($WILDSEEK_BEEG on the HPC side).
 
 import json
 import os
+import re
 from pathlib import Path
 
 import duckdb
-import re
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles

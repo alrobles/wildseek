@@ -15,7 +15,7 @@ import json
 import time
 from dataclasses import dataclass
 
-from .meta_client import MetaClient, MODEL_AGENT
+from .meta_client import MODEL_AGENT, MetaClient
 
 DECISION_SCHEMA = {
     "type": "json_schema",

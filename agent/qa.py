@@ -102,7 +102,7 @@ def _brain(man: dict | None) -> list[dict]:
         return [{"name": "brain review", "ok": False,
                  "value": "no manifest"}]
     try:
-        from .meta_client import MetaClient, MODEL_AGENT
+        from .meta_client import MODEL_AGENT, MetaClient
         c = MetaClient()
         r = c.chat([
             {"role": "system", "content":

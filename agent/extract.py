@@ -11,8 +11,8 @@ import json
 import time
 from dataclasses import dataclass, field
 
-from .meta_client import MetaClient, MODEL_EXTRACTION
 from .lit_search import Work
+from .meta_client import MODEL_EXTRACTION, MetaClient
 
 # NOTE: under strict mode every property must be listed in `required`
 # (the API 400s otherwise — verified 2026-10-26).

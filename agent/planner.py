@@ -66,7 +66,7 @@ def plan(data_dir: Path | str = "data",
         new_sp = []
     observed = set(det["bird_species"].dropna())
     spec.new_species = new_sp
-    spec.new_detections = int(len(det))
+    spec.new_detections = len(det)
 
     geo = serve / "detections.geojson"
     if geo.exists():

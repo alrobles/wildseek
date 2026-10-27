@@ -6,7 +6,6 @@ Reads data/species_winner.csv (specieskey already = GBIF key), hits
 /v1/species/{key}, writes data/taxonomy.parquet:
 specieskey, species, class, order, family, genus
 """
-import time
 from concurrent.futures import ThreadPoolExecutor
 
 import pandas as pd
