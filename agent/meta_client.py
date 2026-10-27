@@ -35,8 +35,9 @@ MODEL_AGENT = "muse-spark-1.3"                   # orchestration brain
 MODEL_SHOWCASE = "muse-wonder-1.0"               # final/demo reasoning
 MODEL_LOCAL = "muse-glimmer"                     # self-hosted 30B on KU HPC
 LOCAL_BASE_URL = "http://127.0.0.1:20007/v1"     # ssh tunnel -> ollama job (Q6000)
-LOCAL_MI210_BASE_URL = "http://127.0.0.1:20009/v1"  # ssh tunnel -> llama.cpp rocm (MI210)
-LOCAL_BASE_URLS = (LOCAL_BASE_URL, LOCAL_MI210_BASE_URL)
+LOCAL_MI210_BASE_URL = "http://127.0.0.1:20009/v1"  # ssh tunnel -> llama.cpp rocm (MI210 inst a)
+LOCAL_MI210_B_URL = "http://127.0.0.1:20010/v1"     # instancia b escalonada (failover)
+LOCAL_BASE_URLS = (LOCAL_BASE_URL, LOCAL_MI210_BASE_URL, LOCAL_MI210_B_URL)
 
 
 @dataclass
@@ -87,6 +88,7 @@ class MetaClient:
         self.key = api_key or os.environ["MODEL_API_KEY"]
         self.base = base_url.rstrip("/")
         self.spend = Spend()
+        self._fallback_bases: tuple[str, ...] = ()
         self._http = requests.Session()
         self._http.headers["Authorization"] = f"Bearer {self.key}"
 
@@ -99,8 +101,11 @@ class MetaClient:
     @classmethod
     def local_mi210(cls) -> "MetaClient":
         """Self-hosted Muse Glimmer on a MI210 via llama.cpp rocm (~44 tok/s).
-        Tunnel on :20009 — see ~/.hermes/scripts/hpc-musemi-tunnel-watchdog.sh."""
-        return cls(api_key="llama", base_url=LOCAL_MI210_BASE_URL)
+        Tunnel on :20009 — see ~/.hermes/scripts/hpc-musemi-tunnel-watchdog.sh.
+        Falls back to the staggered instance on :20010 on connection error."""
+        c = cls(api_key="llama", base_url=LOCAL_MI210_BASE_URL)
+        c._fallback_bases = (LOCAL_MI210_BASE_URL, LOCAL_MI210_B_URL)
+        return c
 
     def list_models(self) -> list[str]:
         r = self._http.get(f"{self.base}/models", timeout=30)
@@ -131,10 +136,17 @@ class MetaClient:
         if temperature is not None:
             body["temperature"] = temperature
 
+        bases = self._fallback_bases or (self.base,)
         for attempt in range(retries):
-            r = self._http.post(
-                f"{self.base}/chat/completions", json=body, timeout=180
-            )
+            try:
+                r = self._http.post(
+                    f"{bases[attempt % len(bases)]}/chat/completions",
+                    json=body, timeout=180,
+                )
+            except requests.ConnectionError:
+                if attempt < retries - 1:
+                    continue
+                raise
             if r.status_code == 429 and attempt < retries - 1:
                 wait = float(r.headers.get("Retry-After", 2 ** attempt))
                 time.sleep(wait + 0.25)
