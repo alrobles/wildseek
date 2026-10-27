@@ -4,7 +4,7 @@
 
 A living host-susceptibility + supply-chain risk monitoring system.
 Extends the three-distance ML framework from
-[Robles-Fernández et al. 2022, PNAS](papers/robles-fernández-et-al-2022-wildlife-susceptibility-to-infectious-diseases-at-global-scales.pdf)
+[Robles-Fernández et al. 2022, PNAS](https://doi.org/10.1073/pnas.2122851119)
 — geographic, environmental, and phylogenetic distances — into a
 continuously-updated surveillance tool.
 
@@ -79,7 +79,6 @@ work submitted here was built during Oct 26 – Nov 4, 2026.
 | `api/` | FastAPI monitor service |
 | `app/` | Map frontend (geoseek pattern) |
 | `data/` | Local artifacts (gitignored) |
-| `papers/` | Reference papers |
 | `docs/` | `meta-api.md` (API facts/pricing), `data-sources.md` (endpoints) |
 
 ## The Factory (nightly autonomous loop)
