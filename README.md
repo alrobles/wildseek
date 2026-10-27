@@ -1,6 +1,6 @@
-# Susceptibility Monitor
+# WildSeek — wildlife susceptibility monitor
 
-**Meta Global AI Developer Hackathon — Indie track**
+**Meta Global AI Developer Hackathon — Indie track** · live demo: `wildseek.ecoseek.org`
 
 A living host-susceptibility + supply-chain risk monitoring system.
 Extends the three-distance ML framework from
@@ -15,35 +15,44 @@ supply-chain exposure, county-level.
 ## Architecture
 
 ```
-literature (OpenAlex)          USDA APHIS hub (ArcGIS, no key)
-        │                      wild-bird + livestock detections
-        ▼                      flyways, county resolution
-  agent/ ── Muse Spark mines host–pathogen evidence
-        │   (living host list; bulk extraction on contributor models)
+GBIF occurrences (1/120° grid)   USDA APHIS hub (ArcGIS, no key)
+        │                        wild-bird + livestock detections
+        ▼                        flyway polygons
+  pipeline/ ── species pools + ecoregion accessible area (M)
+        │   + ERA5 30-year normals → env_occ / env_m
         ▼
-  model/ ── PNAS three-distance RF + phylopred PU host prediction
-        │   + Clay v1.5 embedding distance (new 4th signal)
+  xnicher campaign ── 88 bio-var pairs × 1,148 species
+        │   = 101,376 fits, all accepted; AIC winners
         ▼
-  pipeline/ ── nightly re-score → susceptibility rasters
-        │   × NASS poultry inventory → supply-chain risk layer
+  agent/ ── Muse Spark typed triage over fit diagnostics
+        │   ambiguous tail (AIC-tied, sparse, marine) →
+        │   accept / flag_review / drop / switch_family,
+        │   then a real refit runner honours switch_to
         ▼
-  api/ + app/ ── monitoring map: where to sample next,
-             which production regions are exposed
+  pipeline/ ── per-species suitability rasters (CONUS 1/120°)
+        │   × recency-weighted detection kernel → risk_1120
+        │   → HUC8 watershed ranking (sub-county, named)
+        ▼
+  api/ + app/ ── wildseek.ecoseek.org: monitoring map,
+             /explain + /briefing with cached agent outputs
 ```
 
-Two parallel views of the same score: which wild mammals are likely
-next hosts, and which production counties sit inside the risk zone.
+Two parallel views of the same score: which wild vertebrates are
+climatically suitable hosts where, and which watersheds sit inside
+the risk zone.
 
 ## Hackathon delta
 
-- Meta Model API integration: Muse Spark (agent + literature extraction),
-  SAM 3.1 (livestock–wildlife interface segmentation), Muse Image
-  (surveillance briefing figures).
-- Clay v1.5 foundation-model embeddings as a fourth environmental-distance
-  signal, ablated against bioclim distances.
+- Meta Model API throughout: muse-spark-1.3 for typed triage and
+  /explain, muse-wonder-1.0 for the narrative /briefing,
+  muse-spark-1.2-contributor for bulk extraction; muse-glimmer
+  self-hosted for free offload.
+- Agentic decision layer with real teeth: an ambiguous-tail selector
+  surfaces only suspicious fits; the agent's `switch_to` verdicts are
+  executed by `pipeline/refit_switched.R` and both AICs land in
+  `decisions_delta.csv`.
 - Living host list: agentic literature mining → provenance-tracked
-  evidence → automatic model re-scoring. Real-time fit: H5N1's known
-  mammal host list grew ~50% between Mar 2024 and Jul 2025.
+  evidence (OpenAlex → typed JSON).
 
 Pre-hackathon baseline is tagged `pre-hackathon` in upstream repos;
 work submitted here was built during Oct 26 – Nov 4, 2026.
