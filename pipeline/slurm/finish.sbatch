@@ -1,32 +1,27 @@
 #!/bin/bash
-#SBATCH --job-name=finish
+#SBATCH --job-name=finish2
 #SBATCH --partition=sixhour
-#SBATCH --time=02:00:00
+#SBATCH --time=03:00:00
 #SBATCH --cpus-per-task=8
-#SBATCH --mem=24G
+#SBATCH --mem=64G
+#SBATCH --exclude=r05r10n01,r05r10n02,r05r10n03
 #SBATCH --output=/beegfs/a474r867/meta-hack/logs/finish_%j.log
 #SBATCH --error=/beegfs/a474r867/meta-hack/logs/finish_%j.err
 if [ ! -d /beegfs/a474r867 ]; then exit 53; fi
 cd /beegfs/a474r867/meta-hack
-set -e
+mkdir -p suit_png serve_data
+set -x
 
-echo "== build_risk (detect + det x mean aves suit) =="
+echo "=== RISK $(date -Is)"
 python3 build_risk.py
-
-echo "== risk_watershed =="
+echo "=== WATERSHED $(date -Is)"
 python3 risk_watershed.py
-
-echo "== render risk png =="
-python3 render_png.py risk_1120.tif risk.png --cmap turbo --vmax 1
-python3 render_png.py risk_detect_1120.tif risk_detect.png --cmap turbo --vmax 1
-
-echo "== render suit pngs (parallel, skip-existing) =="
-mkdir -p suit_png
-ls suit/suit_*.tif | sed 's/.*suit_\(.*\)\.tif/\1/' | \
-  xargs -P 8 -I {} sh -c '[ -f suit_png/suit_{}.png ] || \
-  python3 render_png.py suit/suit_{}.tif suit_png/suit_{}.png --cmap viridis --vmax 1'
-echo "pngs: $(ls suit_png/*.png | wc -l)"
-
-echo "== export serve_data =="
-python3 export_serve.py /beegfs/a474r867/meta-hack /beegfs/a474r867/meta-hack/serve_data
-echo DONE
+echo "=== COUNTY EXPOSURE $(date -Is)"
+python3 county_exposure.py
+echo "=== RENDER 3857 $(date -Is)"
+ls suit/suit_*.tif | xargs -P 8 -I{} sh -c \
+  'b=$(basename {} .tif); [ -f suit_png/$b.png ] || python3 render_3857.py {} suit_png/$b.png'
+echo "=== EXPORT $(date -Is)"
+python3 export_serve.py --src /beegfs/a474r867/meta-hack \
+  --dst /beegfs/a474r867/meta-hack/serve_data
+echo "=== DONE $(date -Is)"

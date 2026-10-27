@@ -172,7 +172,11 @@ async function load() {
     const row = (Array.isArray(sp)?sp:[]).find(r=>r.specieskey==sel.value);
     document.getElementById("sel").innerHTML = row ?
       `${row.species} · ${row.best_temp}×${row.best_prec}` +
-      (row.review ? '<span class="badge">flag_review</span>' : "") : "";
+      (row.p_host != null ? ` · <b>P(host)=${row.p_host.toFixed(2)}</b>` +
+       (row.p05 != null ? ` [${row.p05.toFixed(2)}–${row.p95.toFixed(2)}]` : "")
+       : "") +
+      (row.host_label ? ' <span class="badge">known host</span>' : "") +
+      (row.review ? ' <span class="badge">flag_review</span>' : "") : "";
     if (sel.value) {
       map.addSource("suit", {type:"image",
         url: SRC+`suit_${sel.value}.png`, coordinates: META.suit_bbox});
@@ -200,6 +204,20 @@ async function load() {
   // --- click → watershed/county card ---------------------------------
   map.on("click", async e => {
     const card = document.getElementById("clickcard");
+    const det = map.queryRenderedFeatures(e.point,
+      {layers:["detPt"]})[0];
+    if (det) {
+      const p = det.properties;
+      card.style.display = "block";
+      document.getElementById("ccTitle").textContent =
+        p.species ? `HPAI+ ${p.species}` : "HPAI+ detection";
+      document.getElementById("ccSub").textContent =
+        `${p.county}, ${p.state} · ${String(p.date).slice(0,10)}` +
+        (p.strain ? ` · ${p.strain}` : "");
+      document.getElementById("ccBody").textContent =
+        "confirmed HPAI detection (NWHC/APHIS)";
+      return;
+    }
     const feat = map.queryRenderedFeatures(e.point,
       {layers:["ctyFill"]})[0];
     if (feat) {

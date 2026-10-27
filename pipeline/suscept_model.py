@@ -18,9 +18,12 @@ Output: <input_dir>/serve/susceptibility.parquet
 import argparse
 import os
 import sys
+import warnings
 
 import numpy as np
 import pandas as pd
+
+warnings.filterwarnings("ignore", category=FutureWarning)  # sklearn 1.9 LRCV spam
 
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
