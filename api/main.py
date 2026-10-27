@@ -57,9 +57,24 @@ def species(limit: int = 200, cls: str | None = None) -> list[dict]:
     f = DATA / "species_winner.csv"
     if not f.exists():
         raise HTTPException(503, "catalog not exported yet")
+    sus = DATA / "susceptibility.parquet"
     w = f"and lower(species) like '%{cls.lower()}%'" if cls else ""
-    return q(f"select * from '{f}' {('where 1=1 ' + w) if w else ''} "
-             f"order by aic limit {limit}")
+    where = f"where 1=1 {w}" if w else ""
+    if sus.exists():
+        return q(f"select w.*, s.p_host, s.p05, s.p95, s.label as host_label "
+                 f"from '{f}' w left join '{sus}' s "
+                 f"on w.specieskey=s.specieskey {where} "
+                 f"order by aic limit {limit}")
+    return q(f"select * from '{f}' {where} order by aic limit {limit}")
+
+
+@app.get("/susceptibility")
+def susceptibility(top: int = 100) -> list[dict]:
+    """PNAS-style P(host|env,geo,phy proximity to known H5N1 hosts)."""
+    f = DATA / "susceptibility.parquet"
+    if not f.exists():
+        raise HTTPException(503, "susceptibility model not exported yet")
+    return q(f"select * from '{f}' order by p_host desc limit {top}")
 
 
 @app.get("/species/{key}/fit")

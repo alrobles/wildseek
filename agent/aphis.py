@@ -25,6 +25,9 @@ WILD_BIRD = f"{BASE}/VS_Avian_Influenza_Wild_Bird_Surveillance_Dashboard_data_vi
 LIVESTOCK = f"{BASE}/VS_HPAI_Livestock_Events_Feature_Layer/FeatureServer/11/query"
 # APHIS commercial/backyard flock confirmations, county-level (OSU mirror
 # of the USDA APHIS public dataset)
+WILD_BIRD_SPECIES = (
+    "https://services1.arcgis.com/jWQlP64OuwDh6GGX/arcgis/rest/services/"
+    "hpai_wildbirds_usa/FeatureServer/0/query")
 POULTRY = ("https://services1.arcgis.com/jWQlP64OuwDh6GGX/arcgis/rest/"
            "services/hpai_commercial_backyard_usa/FeatureServer/0/query")
 FLYWAY_ADMIN = f"{BASE}/VS_Wild_Bird_Migratory_Flyways_US_Admin_and_Global/FeatureServer/0/query"
@@ -178,6 +181,38 @@ def flock_events(limit: int | None = None) -> list[FlockEvent]:
             confirmed=_ms(a.get("Confirmed")),
             production=a.get("Production") or "",
             birds_affected=float(a.get("Birds_Affected") or 0),
+            lon=g.get("x"), lat=g.get("y"),
+        ))
+    return out
+
+
+@dataclass
+class SpeciesDetection:
+    """HPAI detection with species name (NWHC mirror layer)."""
+    state: str
+    county: str
+    county_fips: int | None
+    date_detected: datetime | None
+    bird_species: str        # common name as reported
+    hpai_strain: str
+    woah: str
+    lon: float | None
+    lat: float | None
+
+
+def wild_bird_species(limit: int | None = None) -> list[SpeciesDetection]:
+    """Species-level HPAI wild-bird confirmations (drives host labels)."""
+    out = []
+    for f in _query(WILD_BIRD_SPECIES, "1=1", limit, "ObjectId ASC"):
+        a, g = f["attributes"], f.get("geometry") or {}
+        out.append(SpeciesDetection(
+            state=a.get("State") or "",
+            county=a.get("County") or "",
+            county_fips=a.get("County_FIPS"),
+            date_detected=_ms(a.get("Date_Detected") or a.get("Collection_Date")),
+            bird_species=a.get("Bird_Species") or "",
+            hpai_strain=a.get("HPAI_Strain") or "",
+            woah=a.get("WOAH_Classification") or "",
             lon=g.get("x"), lat=g.get("y"),
         ))
     return out

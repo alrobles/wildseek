@@ -52,8 +52,27 @@ def main(src: str, dst: str) -> None:
         "n_detections": None,
     }
 
+    # species-level detections preferred; site-level as fallback
+    det_sp = Path(src) / "aphis_wild_birds_species.parquet"
     det = Path(src) / "aphis_wild_birds.parquet"
-    if det.exists():
+    if det_sp.exists():
+        rows = con.execute(
+            f"""select lon, lat, state, county, bird_species, hpai_strain,
+                       date_detected
+                from '{det_sp}' where lat is not null"""
+        ).fetchall()
+        feats = [{"type": "Feature",
+                  "properties": {"state": r[2], "county": r[3],
+                                 "species": r[4], "strain": r[5],
+                                 "date": str(r[6]),
+                                 "year": int(str(r[6])[:4]) if r[6] else None},
+                  "geometry": {"type": "Point",
+                               "coordinates": [r[0], r[1]]}}
+                 for r in rows]
+        (d / "detections.geojson").write_text(json.dumps(
+            {"type": "FeatureCollection", "features": feats}))
+        meta["n_detections"] = len(feats)
+    elif det.exists():
         rows = con.execute(
             f"""select lon, lat, state, county, watershed, date_collected
                 from '{det}' where pathogenicity='High Path AI'
@@ -68,6 +87,12 @@ def main(src: str, dst: str) -> None:
                  for r in rows]
         (d / "detections.geojson").write_text(json.dumps(
             {"type": "FeatureCollection", "features": feats}))
+        meta["n_detections"] = len(feats)
+
+    sus = Path(src) / "susceptibility.parquet"
+    if sus.exists():
+        (d / "susceptibility.parquet").write_bytes(sus.read_bytes())
+        meta["n_susceptibility"] = len(pd.read_parquet(sus))
 
     pl = Path(src) / "aphis_poultry.parquet"
     if pl.exists():
@@ -108,11 +133,6 @@ def main(src: str, dst: str) -> None:
         assert out.stat().st_size > 1_000_000 and \
             all(f["geometry"]["coordinates"][0] for f in gj["features"]), \
             "flyways export produced empty geometries"
-
-    if det.exists():
-        meta["n_detections"] = con.execute(
-            f"select count(*) from '{det}' where pathogenicity='High Path AI'"
-        ).fetchone()[0]
 
     for png in Path(src).glob("*.png"):
         (d / png.name).write_bytes(png.read_bytes())

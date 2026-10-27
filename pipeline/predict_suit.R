@@ -36,11 +36,15 @@ bc_lambda <- function(x) {
 }
 
 dir.create(sprintf("%s/suit", OUT), showWarnings = FALSE, recursive = TRUE)
+# class lookup: specieskey present in env_occ_aves => "aves" else "mammalia"
+# (species_winner.csv lost its class column in export merge)
+aves_keys <- dbGetQuery(con, sprintf(
+  "select distinct specieskey from '%s/env_occ_aves.parquet'", OUT))$specieskey
 for (i in seq_len(nrow(win))) {
   sp <- win$specieskey[i]; tv <- win$best_temp[i]; pv <- win$best_prec[i]
   out_tif <- sprintf("%s/suit/suit_%d.tif", OUT, sp)
   if (file.exists(out_tif)) next
-  cls <- tolower(win$class[i])
+  cls <- if (sp %in% aves_keys) "aves" else "mammalia"
   occ <- dbGetQuery(con, sprintf(
     "select %s,%s from '%s/env_occ_%s.parquet' where specieskey=%d",
     tv, pv, OUT, cls, sp))
