@@ -18,6 +18,7 @@ import time
 from pathlib import Path
 
 import duckdb
+import pandas as pd
 
 
 def main(src: str, dst: str) -> None:
@@ -26,11 +27,25 @@ def main(src: str, dst: str) -> None:
     d = Path(dst)
     d.mkdir(parents=True, exist_ok=True)
 
-    for name in ("species_winner.csv", "fit_catalog.csv",
-                 "risk_watershed.parquet", "decisions_all.jsonl"):
+    for name in ("fit_catalog.csv", "risk_watershed.parquet",
+                 "decisions_all.jsonl", "decisions_delta.csv"):
         p = Path(src) / name
         if p.exists():
             (d / name).write_bytes(p.read_bytes())
+
+    # species_winner.csv: merge tail-decision drops/review flag when the
+    # delta exists (decide_tail writes to dst; re-export must not lose it)
+    win = Path(src) / "species_winner.csv"
+    if win.exists():
+        w = pd.read_csv(win)
+        dl = d / "decisions_delta.csv"
+        if dl.exists():
+            delta = pd.read_csv(dl)
+            w["review"] = w["specieskey"].isin(
+                delta.loc[delta["decision"] == "flag_review", "specieskey"])
+            drops = set(delta.loc[delta["decision"] == "drop", "specieskey"])
+            w = w[~w["specieskey"].isin(drops)]
+        w.to_csv(d / "species_winner.csv", index=False)
 
     det = Path(src) / "aphis_wild_birds.parquet"
     if det.exists():
