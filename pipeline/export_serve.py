@@ -160,6 +160,12 @@ def main(src: str, dst: str) -> None:
 
     suits = list(Path(src).glob("suit_*.png"))
     suits += list((Path(src) / "suit_png").glob("suit_*.png"))
+    # dst hygiene: drop suit_* that no longer exist in src (e.g. species
+    # skipped by M-masking would otherwise stay stale from a prior export)
+    keep = {s.name for s in suits} | {s.name + ".meta.json" for s in suits}
+    for stale in d.glob("suit_*.png*"):
+        if stale.name not in keep:
+            stale.unlink()
     meta["n_species"] = len(suits) or None
     if suits:
         mj = Path(str(suits[0]) + ".meta.json")
