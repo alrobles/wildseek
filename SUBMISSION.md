@@ -71,12 +71,15 @@ full-text papers, with per-edge provenance (PMID + evidence span):
   edge against its span — rejects serology-only and species-without-
   detection mentions (42% pass on the ZOVER abstracts run). On a
   30-edge audit, raw precision 73% → **100% on judge-verified edges**.
-- **Numbers**: 1,451 mined edges / 1,059 unique pairs / 129 papers
+- **Numbers**: 4,854 mined edges / 3,740 unique pairs / 282 papers
   (`interactions.parquet`). On the held-out Ebola/Lassa gold,
   full-text pair-recall **56% vs 16% abstract-only** (3.4×).
 - **Prospective validation**: `we-called-it` card froze the top-15
   unlabeled species by p_host on **2026-10-28**; a post-freeze PMID
   naming one as host flips it to confirmed — statuses shown live.
+  Mining literature the model never trained on already pays off:
+  **p_host AUC 0.74 on 53 literature-evidenced held-out hosts**, and
+  4/15 frozen predictions already carry a mined host edge.
 - Endpoints: `/litmine` (ticker), `/metrics`, `/we-called-it`,
   `/decisions` (executable switch_to delta).
 
