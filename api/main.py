@@ -147,6 +147,23 @@ def we_called_it() -> JSONResponse:
     return JSONResponse(json.loads(baked.read_text()))
 
 
+@app.get("/decisions")
+def decisions() -> JSONResponse:
+    """Campaign decision delta: per-species accept/flag_review/drop +
+    the executable switch_to column (drives the refit queue)."""
+    f = DATA / "decisions_delta.csv"
+    if not f.exists():
+        raise HTTPException(503, "decision delta not exported yet")
+    import pandas as pd
+    d = pd.read_csv(f).astype(object).where(pd.notna, None)
+    return JSONResponse({
+        "rows": d.to_dict("records"),
+        "counts": d["decision"].value_counts().to_dict(),
+        "switches": int((d["switch_to"].fillna("none") != "none").sum()),
+        "refit_queue": "data/refit_queue.csv",
+    })
+
+
 @app.get("/briefing")
 def briefing() -> JSONResponse:
     """System-2 nightly digest via muse-wonder (see agent/briefing.py)."""

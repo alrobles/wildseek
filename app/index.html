@@ -65,6 +65,12 @@
     <div class="stat" id="wcilist">loading…</div>
   </div>
 
+  <div class="card">
+    <h3>Decision delta <span class="badge">executable</span></h3>
+    <div class="stat" id="dstat">loading…</div>
+    <div class="stat" id="dlist" style="font-size:11px"></div>
+  </div>
+
   <h2>Watershed watchlist</h2>
   <div id="wslist" class="stat">loading…</div>
 
@@ -221,7 +227,12 @@ async function load() {
         `${m.model.positives}/${m.model.species} labeled</span>` : "") +
       (m.litmine ? `<br><span class="sub">litmine: ${m.litmine.edges}` +
         ` edges · ${m.litmine.papers} papers · $${m.litmine.cost_usd}` +
-        ` total · $${m.litmine.cost_per_edge_usd}/edge</span>` : "");
+        ` total · $${m.litmine.cost_per_edge_usd}/edge` +
+        (m.litmine.precision_raw_audit != null ?
+          ` · precision ${(m.litmine.precision_raw_audit*100).toFixed(0)}%` +
+          ` → ${(m.litmine.precision_judge_verified*100).toFixed(0)}%` +
+          ` after judge` : "") +
+        `</span>` : "");
   } catch(e) { document.getElementById("mxlist").textContent =
     "metrics unavailable"; }
 
@@ -261,6 +272,27 @@ async function load() {
           esc(p.status)}</span>`).join("<br>");
   } catch(e) { document.getElementById("wcilist").textContent =
     "predictions not frozen"; }
+
+  // --- decision delta card -------------------------------------------
+  try {
+    const d = await fetch("/decisions").then(r=>r.json());
+    const cs = Object.entries(d.counts||{})
+      .map(([k,v])=>`${v} ${k}`).join(" · ");
+    document.getElementById("dstat").textContent =
+      `${d.rows.length} species: ${cs} · ${d.switches} switch_to ` +
+      `→ ${d.refit_queue}`;
+    const col = {"accept":"#3fb950","flag_review":"#d29922",
+                 "drop":"#f85149"};
+    document.getElementById("dlist").innerHTML =
+      d.rows.slice(0,10).map(r =>
+        `<span style="color:${col[r.decision]||'#8b949e'}">` +
+        `${esc(r.decision)}</span> ${esc(r.species)}` +
+        (r.switch_to && r.switch_to!=="none" ?
+          ` <b>⇒ ${esc(r.switch_to)}</b>` : "") +
+        ` <span class="sub">${esc(String(r.why||"").slice(0,90))}</span>`
+      ).join("<br>");
+  } catch(e) { document.getElementById("dstat").textContent =
+    "decision delta unavailable"; }
 
   // --- species drill-down -------------------------------------------
   const sel = document.getElementById("spSel");
