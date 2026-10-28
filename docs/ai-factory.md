@@ -19,6 +19,15 @@ PRODUC    artefactos versionados + verificación en destino
 BRAIN     manifest por run + ledger de decisiones (se aprende de esto)
 ```
 
+Diseño v2 con roles concretos y gates: `ai-factory-diagrama.svg`.
+Cambios v2 — approver con juicio (no solo AND), gate de costo con
+veto, tabla de criticidad en Brain (refit→PR, Δdatos>5%→PR,
+refresh→directo), 3 gates deterministas + 1 juez LLM, quorum 3/4
+con código+seguridad obligatorios, retry acotado 1x, TDD por stage.
+El approver es spark-1.3 (Muse) — los roles de dev internos
+(Spec/Builder/revisores) pueden correr en modelos no-Muse sin violar
+la regla del producto.
+
 Sustrato compartido: `MetaClient`. **Regla del hackathon (Meta):
 el stack del producto es exclusivamente Muse** —
 muse-spark-open@fireworks = **S1 extracción bulk — el tier asignado
