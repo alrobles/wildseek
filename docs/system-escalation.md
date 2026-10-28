@@ -23,8 +23,10 @@ compute queue. Prototype status and the build order.
 2. **`agent/fit_judge.py`** — System-1 classifier. Input: audit
    metrics per species (rel_gap, ll_spread, frac inside-95, deltaAIC
    landscape summary, n_occ, taxonomic-ambiguity flag from reconcile).
-   Output: the schema above. Runs bulk on glimmer (self-hosted, free)
-   or spark-1.2-contributor for the nightly 2.5k-species triage.
+   Output: the schema above. Backends, in order:
+   `MetaClient.fireworks()` (llama-v3p3-70b, $100 credit — plenty for
+   ~5M tok/night of triage) -> glimmer self-hosted (free) ->
+   spark-1.2-contributor (paid API) as last resort.
 3. **Calibration set** — ~150 species hand-verdicted (extend the 59
    pilot) -> `data/audit_labels.csv` (specieskey, human_verdict).
    Required before trusting spark's verdicts; also the benchmark for
