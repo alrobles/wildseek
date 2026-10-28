@@ -52,6 +52,7 @@ MODEL_INC_FAST = "mercury-2.5"      # prev gen, 260K ctx
 INC_PRICES = {                      # 50%-off launch prices
     MODEL_INC_JUDGE: (0.01, 0.10, 0.35),
     MODEL_INC_FAST: (0.02, 0.20, 0.75),
+    "mercury-decide": (0.0, 0.02, 0.0),   # input-only billing
 }
 LOCAL_BASE_URL = "http://127.0.0.1:20007/v1"     # ssh tunnel -> ollama job (Q6000)
 LOCAL_MI210_BASE_URL = "http://127.0.0.1:20009/v1"  # ssh tunnel -> llama.cpp rocm (MI210 inst a)
@@ -206,6 +207,31 @@ class MetaClient:
             "usage": usage,
             "cost_usd": cost,
         }
+
+    def decide(self, state, questions: dict, retries: int = 3) -> dict:
+        """Mercury Decide — typed decisions over shared state (INTERNAL
+        TESTING only; product decisions are recorded by Muse models).
+        questions: {name: {type: noul|choice|score|extract, ...}}.
+        Returns {answers, usage, cost_usd}. Inception backend only."""
+        body = {"model": "mercury-decide", "state": state,
+                "questions": questions}
+        for attempt in range(retries):
+            r = self._http.post(f"{self.base}/decisions", json=body,
+                                timeout=60)
+            if r.status_code == 429 and attempt < retries - 1:
+                time.sleep(float(r.headers.get("Retry-After", 2 ** attempt)))
+                continue
+            r.raise_for_status()
+            break
+        data = r.json()
+        usage = Usage(prompt_tokens=(data.get("usage") or {})
+                      .get("input_tokens", 0),
+                      completion_tokens=(data.get("usage") or {})
+                      .get("output_tokens", 0))
+        cost = usage.cost_usd("mercury-decide")
+        self.spend.add("mercury-decide", cost)
+        return {"answers": data.get("answers", {}), "usage": usage,
+                "cost_usd": cost}
 
     def count_tokens(self, messages: list[dict], model: str = MODEL_AGENT) -> int:
         r = self._http.post(
