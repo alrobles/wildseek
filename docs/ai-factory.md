@@ -87,6 +87,23 @@ BRAIN    ledger por scope: papers, pares nuevos, precision en
 | abstractsHostParasites repo (data-raw/) | corpus curado del proyecto abandonado — **salvaje**: etiquetados `df_parasites` (1.9k), `zover_gmpd` (2.2k), `lacs` (6.5k), `db_abstracts`, `df_abstracts_sample`, `df_abstracts_random` (negativos = oro de calibración); corpus por DB `zover_doi` (380), `gmpd_doi` (1.8MB), `parasiteAbstracts` (2.1MB); **`df_abstracts.csv` (9.7MB) lleva columna `score` = output PU ya computado** — el filtro S0 sobre el corpus grande ya existe, no hay que cargar el .rds |
 | pu_learning_model (rds, 57MB) | alternativa al score: re-aplicar S0 a corpus nuevo |
 
+## Referencia de arquitectura (sci-litrev / sciev)
+
+El sistema `sci-litrev` (repo privado, litrev.ecoseek.org) ya corre el
+mismo patrón sobre otro dominio — referencia de diseño, no dependencia:
+
+| su pieza | equivalente litmine |
+|---|---|
+| `table.py` seed→extract(ollama JSON)→verify→pivot | BUILDER + JUDGE: PubTator3→LLM tipado→self-consistency |
+| `pu.py`/`pu_noul` (PU expansion + scorer) | S0 relevancia (aquí: PU score ya materializado en df_abstracts) |
+| `pairs.py` typed pair records | edges.csv con provenance pmid+span |
+| sciev noul verify | SystemOne (muse-spark) — el swap que ya planeamos |
+
+Corpus: `/kuhpc/work/kbs/a474r867/pubmed` — baseline completo
+`pubmed26n*.xml.gz` (2,669 archivos, dump 2026, 166G) + `parsed/` por
+década + `index/pubmed_fts.db` (FTS sobre todo PubMed). La cola de
+papers se construye por query FTS in-cluster, no por API externa.
+
 ## La integración que vale el proyecto
 
 `interactions.parquet` es un **EvidenceFeed más de WildSeek**:
