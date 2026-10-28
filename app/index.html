@@ -251,7 +251,7 @@ async function load() {
       w.predictions.map(p =>
         `${esc(p.species)} · ${p.p_host.toFixed(2)} ` +
         `<span class="sub">${p.status==="confirmed" ? "✓ confirmed" :
-          "awaiting"}</span>`).join("<br>");
+          esc(p.status)}</span>`).join("<br>");
   } catch(e) { document.getElementById("wcilist").textContent =
     "predictions not frozen"; }
 
