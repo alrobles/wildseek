@@ -9,6 +9,12 @@ host-parasite-sharing network should IMPROVE the power-law fit — the
 degree distribution of the "true" network is closer to power-law than
 the under-sampled observed one.
 
+CAVEAT: this is directional evidence, not a test. Power-law degree
+distributions are *expected* in host-parasite networks (galiana2024)
+but need not hold exactly; a negative delta does not invalidate
+predictions and a positive one does not prove them. Treat as a
+soft quality signal alongside PPV/AUC, never a gate.
+
     python litmine/powerlaw_eval.py
 """
 import math
