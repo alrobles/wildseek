@@ -145,7 +145,7 @@ def main():
         cid, v = sys.argv[2], float(sys.argv[3])
         assert cid in CHECKS and v in (0, 0.5, 1), "bad id/value"
         checks[cid] = v
-        scores, p1 = buckets(checks)
+        scores, p1, _ = buckets(checks)
         log.append({"ts": datetime.now(timezone.utc).isoformat(),
                     "set": [cid, v], "scores": scores, "p1": p1})
         save(checks, log)

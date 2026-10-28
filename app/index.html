@@ -54,6 +54,12 @@
     <div class="stat" id="mxlist">loading…</div>
   </div>
 
+  <div class="card">
+    <h3>Litmine loop <span class="badge">daily</span></h3>
+    <div class="stat" id="lmstat">loading…</div>
+    <div class="stat" id="lmlist" style="font-size:11px"></div>
+  </div>
+
   <div class="card" id="wcicard">
     <h3>We called it <span class="badge">dated prediction</span></h3>
     <div class="stat" id="wcilist">loading…</div>
@@ -214,6 +220,26 @@ async function load() {
         ` total</span>` : "");
   } catch(e) { document.getElementById("mxlist").textContent =
     "metrics unavailable"; }
+
+  // --- litmine loop ticker -------------------------------------------
+  try {
+    const lm = await fetch("/litmine").then(r=>r.json());
+    document.getElementById("lmstat").textContent =
+      `${lm.papers} papers → ${lm.chunks} chunks → ` +
+      `${lm.yes_chunks} YES → ${lm.edges} edges` +
+      ` · updated ${lm.updated}`;
+    document.getElementById("lmlist").innerHTML =
+      (lm.recent||[]).map(r => {
+        const p = r.parasite || r.para_texts || "?";
+        const h = r.host || r.host_texts || "?";
+        return `<a href="https://pubmed.ncbi.nlm.nih.gov/${r.pmid}/" ` +
+          `target="_blank" style="color:#58a6ff">PMID ${r.pmid}</a> ` +
+          `${esc(p)} → ${esc(h)} <span class="sub">${esc(r.relation)}` +
+          (r.evidence_span ? ` · “${esc(String(r.evidence_span).slice(0,80))}”` : "") +
+          `</span>`;
+      }).join("<br>");
+  } catch(e) { document.getElementById("lmstat").textContent =
+    "litmine ticker unavailable"; }
 
   // --- we-called-it card ---------------------------------------------
   try {

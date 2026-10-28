@@ -8,6 +8,10 @@ docs/system-escalation.md
 docs/ai-factory.md
 docs/ai-factory-diagrama.svg
 docs/ai-factory-resumen.md
+docs/devin-attack-queue.md
+docs/devin-master-plan.md
+tools/eval_tracker.py
+tools/eval_state.json
 docs/devin-brief-wildseek.md
 docs/repo-inventory.md
 docs/hackathon-alignment.md

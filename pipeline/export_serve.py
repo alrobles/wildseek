@@ -29,7 +29,8 @@ def main(src: str, dst: str) -> None:
 
     for name in ("fit_catalog.csv", "risk_watershed.parquet",
                  "decisions_all.jsonl", "decisions_delta.csv",
-                 "we_called_it.json", "metrics.json"):
+                 "we_called_it.json", "metrics.json",
+                 "litmine_ticker.json"):
         p = Path(src) / name
         if p.exists():
             (d / name).write_bytes(p.read_bytes())

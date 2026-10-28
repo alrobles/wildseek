@@ -85,6 +85,7 @@ def main():
 
     def work(r):
         try:
+            client.ledger_ctx.update({"pmid": str(r.pmid)})
             d, u = triage_chunk(client, model, r.text)
             rd = r._asdict() if hasattr(r, "_asdict") else r
             return {k: rd[k] for k in

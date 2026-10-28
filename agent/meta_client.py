@@ -104,6 +104,37 @@ class MetaClient:
         self._fallback_bases: tuple[str, ...] = ()
         self._http = requests.Session()
         self._http.headers["Authorization"] = f"Bearer {self.key}"
+        # persistent call ledger — one JSONL row per chat() for the
+        # cost meter + post-hoc audits. Path via AGENT_CALLS_LOG.
+        self.ledger_path = os.environ.get("AGENT_CALLS_LOG",
+                                          "data/agent_calls.jsonl")
+        self._tl = threading.local()   # per-thread ledger ctx
+
+    @property
+    def ledger_ctx(self) -> dict:
+        """Per-call context ({"pmid": ...}) merged into ledger rows —
+        thread-local so --jobs workers don't clobber each other."""
+        if not hasattr(self._tl, "ctx"):
+            self._tl.ctx = {}
+        return self._tl.ctx
+
+    def _ledger(self, model: str, usage: Usage, cost: float) -> None:
+        if not self.ledger_path:
+            return
+        try:
+            import json as _j
+            os.makedirs(os.path.dirname(self.ledger_path) or ".",
+                        exist_ok=True)
+            row = {"ts": time.time(), "model": model,
+                   "prompt_tok": usage.prompt_tokens,
+                   "compl_tok": usage.completion_tokens,
+                   "reasoning_tok": usage.reasoning_tokens,
+                   "usd": cost} | getattr(self._tl, "ctx", {})
+            with self.spend._lock:
+                with open(self.ledger_path, "a") as f:
+                    f.write(_j.dumps(row) + "\n")
+        except OSError:
+            pass
 
     @classmethod
     def local(cls) -> MetaClient:
@@ -182,6 +213,7 @@ class MetaClient:
         usage = Usage.from_response(data.get("usage"))
         cost = usage.cost_usd(model)
         self.spend.add(model, cost)
+        self._ledger(model, usage, cost)
         return {
             "content": choice["message"].get("content"),
             # Ollama uses `reasoning`, llama.cpp `reasoning_content`;

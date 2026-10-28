@@ -119,6 +119,7 @@ def main():
 
         def work(r):
             try:
+                client.ledger_ctx.update({"pmid": str(r.pmid)})
                 es, _ = extract_chunk(client, model, r.text)
                 return r, es, None
             except Exception as e:

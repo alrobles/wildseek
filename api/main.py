@@ -119,6 +119,15 @@ def explain(kind: str, ident: str) -> JSONResponse:
     return JSONResponse(do_explain(kind, ident, data_dir=DATA))
 
 
+@app.get("/litmine")
+def litmine() -> JSONResponse:
+    """Litmine loop ticker: papers -> chunks -> YES -> edges."""
+    f = DATA / "litmine_ticker.json"
+    if not f.exists():
+        raise HTTPException(503, "litmine ticker not exported yet")
+    return JSONResponse(json.loads(f.read_text()))
+
+
 @app.get("/metrics")
 def metrics() -> JSONResponse:
     """Baked run metrics: CV AUC, edge counts, model-cascade cost."""
