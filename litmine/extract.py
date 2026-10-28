@@ -79,16 +79,26 @@ def fetch_pubtator(pmids: list[str]) -> list[dict]:
     return list(docs.values())
 
 
-def extract_edges(client: MetaClient, doc: dict, model: str) -> list[dict]:
+def extract_edges(client: MetaClient, doc: dict, model: str,
+                  retries: int = 3) -> list[dict]:
     ent_lines = "\n".join(
         f"  TaxID {tid}: {', '.join(sorted(ts))}"
         for tid, ts in sorted(doc["ents"].items()))
     user = (f"TITLE: {doc.get('title','')}\nABSTRACT: "
             f"{doc.get('abstract','')}\nENTITIES:\n{ent_lines}")
-    r = client.chat(
-        model=model, temperature=0, max_tokens=2048,
-        messages=[{"role": "system", "content": SYS},
-                  {"role": "user", "content": user}])
+    r = None
+    for att in range(retries):
+        try:
+            r = client.chat(
+                model=model, temperature=0, max_tokens=2048,
+                messages=[{"role": "system", "content": SYS},
+                          {"role": "user", "content": user}])
+            break
+        except Exception:
+            if att == retries - 1:
+                raise
+            import time
+            time.sleep(5 * (att + 1))
     m = re.search(r"\[.*\]", r["content"], re.S)
     edges = []
     try:
@@ -145,6 +155,10 @@ def main() -> None:
     ap.add_argument("--model", default=None)
     ap.add_argument("--limit", type=int)
     ap.add_argument("--out", default="edges.csv")
+    ap.add_argument("--jobs", type=int, default=1,
+                    help="parallel doc extractions (threads)")
+    ap.add_argument("--resume", action="store_true",
+                    help="skip pmids already in --out")
     ap.add_argument("--eval", dest="gold")
     args = ap.parse_args()
 
@@ -153,8 +167,12 @@ def main() -> None:
         pmids += [r[args.pmid_col] for r in
                   csv.DictReader(open(args.pmids_csv))
                   if r.get(args.pmid_col)]
-    pmids = [p for p in dict.fromkeys(str(p).strip() for p in pmids)
-             if p and p != "N/A"]
+    pmids = [p for p in dict.fromkeys(
+             re.sub(r"\D", "", str(p)) for p in pmids) if p]
+    done = set()
+    if args.resume and os.path.exists(args.out):
+        done = {r["pmid"] for r in csv.DictReader(open(args.out))}
+        print(f"resume: {len(done)} pmids already done", file=sys.stderr)
     if args.limit:
         pmids = pmids[:args.limit]
     print(f"pmids: {len(pmids)}", file=sys.stderr)
@@ -169,20 +187,46 @@ def main() -> None:
                            if args.backend == "fireworks"
                            else "muse-spark-1.3")
 
-    all_edges = []
-    for d in docs:
-        es = extract_edges(client, d, model)
-        all_edges += es
-        print(f"  pmid {d['pmid']}: {len(es)} edges "
-              f"({len(d['ents'])} ents)", file=sys.stderr)
-
     fields = ["pmid", "parasite_taxid", "host_taxid", "relation",
               "confidence", "evidence_span", "geo", "date", "method",
               "host_texts", "para_texts", "known"]
-    with open(args.out, "w", newline="") as f:
+    all_edges = []
+    fails = []
+    todo = [d for d in docs if d["pmid"] not in done]
+    mode = "a" if args.resume and done else "w"
+    import threading
+    from concurrent.futures import ThreadPoolExecutor, as_completed
+    lock = threading.Lock()
+    with open(args.out, mode, newline="") as f:
         w = csv.DictWriter(f, fieldnames=fields, extrasaction="ignore")
-        w.writeheader()
-        w.writerows(all_edges)
+        if mode == "w":
+            w.writeheader()
+
+        def work(d):
+            try:
+                return d["pmid"], extract_edges(client, d, model), None
+            except Exception as e:
+                return d["pmid"], [], str(e)[:80]
+
+        if args.jobs > 1:
+            pool = ThreadPoolExecutor(args.jobs)
+            futs = [pool.submit(work, d) for d in todo]
+            it = (fu.result() for fu in as_completed(futs))
+        else:
+            it = (work(d) for d in todo)
+        for pm, es, err in it:
+            if err is not None:
+                fails.append((pm, err))
+                print(f"  pmid {pm}: FAIL {err}", file=sys.stderr)
+                continue
+            all_edges += es
+            with lock:
+                w.writerows(es); f.flush()
+            print(f"  pmid {pm}: {len(es)} edges", file=sys.stderr)
+        if args.jobs > 1:
+            pool.shutdown()
+    if fails:
+        print(f"FAILURES: {fails}", file=sys.stderr)
     print(f"wrote {args.out}: {len(all_edges)} edges", file=sys.stderr)
     print(client.spend.report(), file=sys.stderr)
     if args.gold:
