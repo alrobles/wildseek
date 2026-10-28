@@ -80,6 +80,7 @@ BRAIN    ledger por scope: papers, pares nuevos, precision en
 | Fuente | Rol en la fábrica |
 |---|---|
 | PubTator3 API | NER linkeado (TaxID/MESH) — generalidad del extractor |
+| crawl.ecoseek.org | crawler propio — fuentes detrás de JS-walls (ZOVER howto/api), PMC full-text no-OA, publisher pages |
 | ZOVER (mgc.ac.cn) | aristas curadas virus/huésped/vector zoonótico — semilla del grafo + eval. Export ~5.9k muestras (bat/rodent/mosquito/tick.xlsx): Host species + geo + tejido + BioSample → lado hospedero de la arista; el virus se resuelve vía BioSample/BioProject (o implícito por export). **Nota QA: los nombres de archivo están rotados respecto a su contenido** (bat.xlsx=roedores, rodent.xlsx=mosquitos, mosquito.xlsx=garrapatas, tick.xlsx=murciélagos) — nombrar por contenido al ingerir, nunca por filename |
 | **VIRION** (viralemergence/virion) | la mayor DB hospedero↔virus (CLOVER + GenBank diario). **Términos: código LGPL-3.0; los DATOS heredan términos de las DBs componentes (EID2/HP3/Shaw) — el equipo es celoso de la atribución.** Uso nuestro: benchmark interno + chequeo de cobertura, NUNCA re-ingestado como producto. ZeroShot produce aristas propias con procedencia primaria (PMID+span) — más limpio legal y científicamente que re-empaquetar VIRION |
 | VIRION S1 (Lindsley 2026 supp) | `data/litmine/virion_ebola_lassa_gold.csv` — 283 aristas virus-hospedero curadas por expertos (complejo Ebola) sobre 33 PMIDs, con geo/fecha/método: **gold standard del extractor** — correr litmine sobre esos PMIDs y medir precision/recall contra curación humana |
