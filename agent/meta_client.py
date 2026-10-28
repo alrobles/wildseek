@@ -42,8 +42,10 @@ MODEL_FW_JUDGE = "accounts/fireworks/models/muse-spark-open"
 FW_PRICES = {MODEL_FW_JUDGE: (0.90, 0.90, 0.90)}   # ~per 1M tok
 
 # Inception Labs Mercury (OpenAI-compatible) — 100M free tokens; fast
-# diffusion LLM for boilerplate-speed S1 work. Key via
-# INCEPTION_API_KEY (source ~/env/inception-mercury-key).
+# diffusion LLM. Role: dev/boilerplate tooling (NOT the litmine
+# extraction tier — that stays on fireworks muse-spark-open).
+# mercury-decide (/v1/decisions) is the candidate judge tier later.
+# Key via INCEPTION_API_KEY (source ~/env/inception-mercury-key).
 INC_BASE_URL = "https://api.inceptionlabs.ai/v1"
 MODEL_INC_JUDGE = "mercury-3"       # 1M ctx, reasoning_effort param
 MODEL_INC_FAST = "mercury-2.5"      # prev gen, 260K ctx

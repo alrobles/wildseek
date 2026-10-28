@@ -20,9 +20,12 @@ BRAIN     manifest por run + ledger de decisiones (se aprende de esto)
 ```
 
 Sustrato compartido: `MetaClient` (spark-1.3 = S1 pago,
-muse-spark-open@fireworks = S1 bulk con crédito, glimmer = S1 gratis
-self-host, wonder-1.0 = S2), manifest JSON por run, quorum de review,
-release gate curado.
+muse-spark-open@fireworks = **S1 extracción bulk — el tier asignado
+del pipeline**, glimmer = S1 gratis self-host, wonder-1.0 = S2),
+manifest JSON por run, quorum de review, release gate curado.
+Backends fuera del pipeline: mercury-3 (Inception, dev/boilerplate
+tooling); `mercury-decide` = candidato al tier judge (decisiones
+tipadas a $0.02/M input, output gratis).
 
 ## Instancia 1: WildSeek (existe)
 
