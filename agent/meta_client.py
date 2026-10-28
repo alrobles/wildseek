@@ -38,7 +38,7 @@ MODEL_LOCAL = "muse-glimmer"                     # self-hosted 30B on KU HPC
 # Fireworks.ai (OpenAI-compatible) — $100 credit; System-1 bulk triage
 # backend when glimmer isn't up. Key via FIREWORKS_API_KEY.
 FW_BASE_URL = "https://api.fireworks.ai/inference/v1"
-MODEL_FW_JUDGE = "accounts/fireworks/models/llama-v3p3-70b-instruct"
+MODEL_FW_JUDGE = "accounts/fireworks/models/muse-spark-open"
 FW_PRICES = {MODEL_FW_JUDGE: (0.90, 0.90, 0.90)}   # ~per 1M tok
 LOCAL_BASE_URL = "http://127.0.0.1:20007/v1"     # ssh tunnel -> ollama job (Q6000)
 LOCAL_MI210_BASE_URL = "http://127.0.0.1:20009/v1"  # ssh tunnel -> llama.cpp rocm (MI210 inst a)

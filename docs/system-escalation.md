@@ -24,8 +24,9 @@ compute queue. Prototype status and the build order.
    metrics per species (rel_gap, ll_spread, frac inside-95, deltaAIC
    landscape summary, n_occ, taxonomic-ambiguity flag from reconcile).
    Output: the schema above. Backends, in order:
-   `MetaClient.fireworks()` (llama-v3p3-70b, $100 credit — plenty for
-   ~5M tok/night of triage) -> glimmer self-hosted (free) ->
+   `MetaClient.fireworks()` (muse-spark-open — the spark model served
+   on the $100 credit; it's a reasoning model so give the judge
+   generous max_tokens) -> glimmer self-hosted (free) ->
    spark-1.2-contributor (paid API) as last resort.
 3. **Calibration set** — ~150 species hand-verdicted (extend the 59
    pilot) -> `data/audit_labels.csv` (specieskey, human_verdict).
