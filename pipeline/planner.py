@@ -37,12 +37,12 @@ SEC_PER_FIT = 1.3       # observed ~1.3 s per optimize_niche call (CPU)
 def load_state(out: str) -> dict:
     st = {}
     if os.path.exists(f"{out}/fit_catalog.csv"):
-        con = duckdb.connect()
-        st["catalog"] = con.execute(
-            f"""select specieskey, count(*) n_pairs,
-                min(aic) aic_min,
-                count(*) filter (where converged) n_conv
-                from '{out}/fit_catalog.csv' group by 1""").df()
+        with duckdb.connect() as con:
+            st["catalog"] = con.execute(
+                f"""select specieskey, count(*) n_pairs,
+                    min(aic) aic_min,
+                    count(*) filter (where converged) n_conv
+                    from '{out}/fit_catalog.csv' group by 1""").df()
     for f, key in (("species_winner.csv", "winner"),
                    ("decisions_delta.csv", "decisions")):
         p = f"{out}/{f}"
@@ -105,7 +105,8 @@ def plan(pool_csv: str, state: dict, args) -> dict:
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--pool", default=f"pool_flagship{domain.suffix()}.csv")
-    ap.add_argument("--max-cpuh", type=float, default=120)
+    ap.add_argument("--max-cpuh", dest="max_cpuh", type=float,
+                    default=120)
     ap.add_argument("--max-shards", type=int, default=64)
     ap.add_argument("--hours-target", type=float, default=2.0)
     ap.add_argument("--screen-starts", type=int, default=12)

@@ -20,8 +20,6 @@ import urllib.request
 
 IDCONV = "https://www.ncbi.nlm.nih.gov/pmc/utils/idconv/v1.0/?format=json&ids="
 KEY = os.environ.get("NCBI_API_KEY", "")
-if KEY:
-    IDCONV += "&api_key=" + KEY
 
 FIELDS = ["doi", "pmid", "pmcid", "source"]
 
@@ -55,8 +53,11 @@ class DoiDict:
               f"{len(missing)} to resolve", file=sys.stderr)
         for i in range(0, len(missing), batch):
             chunk = missing[i:i + batch]
+            url = IDCONV + ",".join(chunk)
+            if KEY:
+                url += "&api_key=" + KEY
             try:
-                req = urllib.request.Request(IDCONV + ",".join(chunk))
+                req = urllib.request.Request(url)
                 req.add_header("User-Agent", "litmine/0.1 (research)")
                 d = json.loads(
                     urllib.request.urlopen(req, timeout=60).read())

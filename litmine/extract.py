@@ -26,11 +26,9 @@ from meta_client import MetaClient  # noqa: E402
 
 PUBTATOR = ("https://www.ncbi.nlm.nih.gov/research/pubtator3-api/"
             "publications/export/pubtator?pmids=")
-# NCBI api_key (env NCBI_API_KEY, source ~/env/ncbi-key) raises the
-# rate limit 3->10 req/s — required for sweeps, harmless otherwise.
+# NCBI_API_KEY (env) raises the rate limit 3->10 req/s — required for
+# sweeps, harmless otherwise.
 _API_KEY = os.environ.get("NCBI_API_KEY", "")
-if _API_KEY:
-    PUBTATOR += "&api_key=" + _API_KEY
 
 RELATIONS = ("parasite_of", "host_of", "vector_of", "reservoir_of",
              "intermediate_host_of", "dead_end", "no_detection")
@@ -55,7 +53,10 @@ def fetch_pubtator(pmids: list[str]) -> list[dict]:
     docs = {}
     for i in range(0, len(pmids), 100):
         chunk = ",".join(pmids[i:i + 100])
-        req = urllib.request.Request(PUBTATOR + chunk)
+        url = PUBTATOR + chunk
+        if _API_KEY:
+            url += "&api_key=" + _API_KEY
+        req = urllib.request.Request(url)
         req.add_header("User-Agent", "litmine/0.1 (research)")
         raw = urllib.request.urlopen(req, timeout=60).read().decode()
         for line in raw.splitlines():

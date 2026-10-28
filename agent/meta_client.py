@@ -1,9 +1,9 @@
 """Meta Model API client with per-call cost accounting.
 
-OpenAI-compatible surface. Key comes from MODEL_API_KEY env var —
-source it from ~/env/meta-key, never hardcode.
+OpenAI-compatible surface. Key comes from the MODEL_API_KEY env var —
+export it from your key store, never hardcode.
 
-    export MODEL_API_KEY="$(cat ~/env/meta-key)"
+    export MODEL_API_KEY="<your key>"
 
 Pricing: docs/meta-api.md. Contributor-mode models are ~20x cheaper on
 output but grant Meta training rights on the content — use only for
