@@ -62,7 +62,7 @@ def main():
 
     import pandas as pd
     sec = pd.read_parquet(args.sections)
-    sec["key"] = (sec.pmid + "|" + sec.section_type + "|" +
+    sec["key"] = (sec.pmid.astype(str) + "|" + sec.section_type + "|" +
                   sec.offset.astype(str))
     done = set()
     if os.path.exists(args.out):
@@ -115,13 +115,20 @@ def main():
                            ignore_index=True)
         df = df.drop_duplicates("key", keep="last")
         df.to_parquet(args.out, index=False)
+    elif os.path.exists(args.out):
+        df = pd.read_parquet(args.out)
+        print("nada pendiente — resumen sobre el parquet existente",
+              file=sys.stderr)
+    else:
+        print("nada pendiente y no hay parquet previo", file=sys.stderr)
+        return
 
-    yes = df.relevant.sum()
-    tok_in, tok_out = df.in_tok.sum(), df.out_tok.sum()
-    est = df[df.relevant == True].in_tok.sum()  # noqa: E712
+    yes = int(df.relevant.sum())
+    tok_in, tok_out = int(df.in_tok.sum()), int(df.out_tok.sum())
+    est = int(df[df.relevant == True].in_tok.sum())  # noqa: E712
     print(f"\nwrote {args.out}: {len(df)} chunks | YES {yes} "
-          f"({100*yes/len(df):.0f}%) | tok in {tok_in} out {tok_out}",
-          file=sys.stderr)
+          f"({100*yes/max(len(df),1):.0f}%) | tok in {tok_in} "
+          f"out {tok_out}", file=sys.stderr)
     print(f"tokens que llegarian a Capa 2: {est} "
           f"({100*est/max(tok_in,1):.0f}% del total) — ahorro "
           f"~{100-100*est/max(tok_in,1):.0f}%", file=sys.stderr)

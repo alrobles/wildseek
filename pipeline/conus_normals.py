@@ -77,7 +77,7 @@ def main() -> None:
                 mean = (acc / cnt).astype(np.float32)
             dst.write(mean, v)
             print("bio", v, "done", flush=True)
-    dst.descriptions = tuple(f"bio{i:02d}" for i in range(1, 20))
+        dst.descriptions = tuple(f"bio{i:02d}" for i in range(1, 20))
     print("wrote", tif, (19, win.height, win.width))
 
 

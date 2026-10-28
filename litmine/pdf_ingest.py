@@ -29,8 +29,11 @@ KEEP = {"TITLE", "ABSTRACT", "METHODS", "RESULTS", "TABLE", "FIG", "SUPP"}
 
 
 def extract_text(pdf):
-    r = subprocess.run(["pdftotext", "-layout", pdf, "-"],
-                       capture_output=True, text=True, timeout=120)
+    try:
+        r = subprocess.run(["pdftotext", "-layout", pdf, "-"],
+                           capture_output=True, text=True, timeout=120)
+    except FileNotFoundError:
+        sys.exit("pdftotext not found — install poppler-utils")
     return r.stdout if r.returncode == 0 else ""
 
 

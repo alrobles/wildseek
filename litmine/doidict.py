@@ -31,6 +31,7 @@ class DoiDict:
         self.path = path
         self.by_doi = {}
         self.by_pmid = {}
+        self.meta = {}
         if os.path.exists(path):
             for r in csv.DictReader(open(path)):
                 self._put(r["doi"], r["pmid"], r.get("pmcid", ""),
@@ -39,6 +40,7 @@ class DoiDict:
     def _put(self, doi, pmid, pmcid="", source="idconv"):
         self.by_doi[doi] = pmid
         self.by_pmid[pmid] = doi
+        self.meta[doi] = {"pmcid": pmcid, "source": source}
 
     def pmid_for(self, doi):
         return self.by_doi.get(doi)
@@ -74,8 +76,10 @@ class DoiDict:
             w = csv.DictWriter(f, fieldnames=FIELDS)
             w.writeheader()
             for doi, pmid in sorted(self.by_doi.items()):
+                m = self.meta.get(doi, {})
                 w.writerow({"doi": doi, "pmid": pmid,
-                            "pmcid": "", "source": "idconv"})
+                            "pmcid": m.get("pmcid", ""),
+                            "source": m.get("source", "idconv")})
 
 
 def main():

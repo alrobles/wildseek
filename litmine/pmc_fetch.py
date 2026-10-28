@@ -29,7 +29,9 @@ UA = {"User-Agent": "litmine/0.1 (research)", "tool": "litmine",
 
 
 def _get(url, timeout=60):
-    req = urllib.request.Request(url + ("&api_key=" + KEY if KEY else ""))
+    if KEY:
+        url += ("&" if "?" in url else "?") + "api_key=" + KEY
+    req = urllib.request.Request(url)
     for k, v in UA.items():
         req.add_header(k, v)
     return urllib.request.urlopen(req, timeout=timeout).read()

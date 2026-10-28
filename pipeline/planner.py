@@ -61,8 +61,8 @@ def plan(pool_csv: str, state: dict, args) -> dict:
     # tier3: species the audit/verdicts already flagged -> more starts
     flagged = set()
     dec = state.get("decisions")
-    if dec is not None and "verdict" in dec:
-        flagged = set(dec.loc[dec["verdict"].isin(
+    if dec is not None and "decision" in dec:
+        flagged = set(dec.loc[dec["decision"].isin(
             ["flag_review", "refit", "switch"]), "specieskey"])
     win = state.get("winner")
     if win is not None and "rel_gap" in win:

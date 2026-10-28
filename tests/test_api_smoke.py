@@ -18,18 +18,13 @@ def _catalog(d, n=3):
     (d / "fit_catalog.csv").write_text("specieskey,pair,aic\n1,x,1.0\n")
 
 
-def _client(data):
-    import api.main as mm
-    mm.DATA = data
-    return TestClient(app)
-
-
 def test_health_ok_and_empty(tmp_path, monkeypatch):
     import api.main as mm
     monkeypatch.setattr(mm, "DATA", tmp_path)
     assert TestClient(app).get("/health").json()["status"] == "empty"
     _catalog(tmp_path)
-    assert _client(tmp_path).get("/health").json()["status"] == "ok"
+    monkeypatch.setattr(mm, "DATA", tmp_path)
+    assert TestClient(app).get("/health").json()["status"] == "ok"
 
 
 def test_species_joins_p_host(tmp_path, monkeypatch):

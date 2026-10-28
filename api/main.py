@@ -12,6 +12,7 @@ synced from the cluster staging dir ($WILDSEEK_BEEG on the HPC side).
 import json
 import os
 import re
+import sys
 from pathlib import Path
 
 import duckdb
@@ -31,10 +32,9 @@ def q(sql: str) -> list[dict]:
     c.execute("PRAGMA threads=4")
     try:
         return c.execute(sql).fetchdf().to_dict("records")
-    except HTTPException:
-        raise
     except Exception as ex:
-        raise HTTPException(503, f"catalog query failed: {ex!r}"[:200])
+        print(f"catalog query failed: {ex!r}", file=sys.stderr)
+        raise HTTPException(503, "catalog query failed")
     finally:
         c.close()
 

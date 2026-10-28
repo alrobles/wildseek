@@ -93,6 +93,7 @@ for (i in seq_len(nrow(sp_list))) {
   ecos <- dbGetQuery(con, sprintf(
     "select distinct eco_id from '%s/m_ecoregions.parquet'
      where specieskey=%d", OUT, sp))$eco_id
+  if (length(ecos) == 0) { cat(sp, "no m ecoregions; skip\n"); next }
   m <- dbGetQuery(con, sprintf(
     "select %s from '%s/env_normals_96_25.parquet' where eco_id in (%s)",
     paste(bios, collapse = ","), OUT, paste(ecos, collapse = ",")))
@@ -139,7 +140,8 @@ for (i in seq_len(nrow(sp_list))) {
           convergence = sol$convergence[s_i])
       }
       Sig <- matrix(c(th$s[1]^2, th$rho*prod(th$s), th$rho*prod(th$s), th$s[2]^2), 2)
-      Si  <- solve(Sig)
+      Si  <- tryCatch(solve(Sig), error = function(e) NULL)
+      if (is.null(Si)) next
       d2  <- (eo[,1]-th$mu[1])^2*Si[1,1] + 2*(eo[,1]-th$mu[1])*(eo[,2]-th$mu[2])*Si[1,2] +
              (eo[,2]-th$mu[2])^2*Si[2,2]
       occ_z <- data.frame(lat_30 = occ$lat_30, lon_30 = occ$lon_30,

@@ -13,6 +13,7 @@ public data (papers, abstracts).
 from __future__ import annotations
 
 import os
+import threading
 import time
 from dataclasses import dataclass, field
 
@@ -41,11 +42,11 @@ FW_BASE_URL = "https://api.fireworks.ai/inference/v1"
 MODEL_FW_JUDGE = "accounts/fireworks/models/muse-spark-open"
 FW_PRICES = {MODEL_FW_JUDGE: (0.90, 0.90, 0.90)}   # ~per 1M tok
 
-# Non-Muse providers live in agent/dev_mercury.py — internal dev
-# tooling only, never shipped in the public snapshot (Muse-only rule).
-LOCAL_BASE_URL = "http://127.0.0.1:20007/v1"     # ssh tunnel -> ollama job (Q6000)
-LOCAL_MI210_BASE_URL = "http://127.0.0.1:20009/v1"  # ssh tunnel -> llama.cpp rocm (MI210 inst a)
-LOCAL_MI210_B_URL = "http://127.0.0.1:20010/v1"     # instancia b escalonada (failover)
+# Non-Muse providers live outside the product stack — internal dev
+# tooling only, excluded from the public snapshot (Muse-only rule).
+LOCAL_BASE_URL = "http://127.0.0.1:20007/v1"      # local tunnel
+LOCAL_MI210_BASE_URL = "http://127.0.0.1:20009/v1"  # local tunnel
+LOCAL_MI210_B_URL = "http://127.0.0.1:20010/v1"     # failover tunnel
 LOCAL_BASE_URLS = (LOCAL_BASE_URL, LOCAL_MI210_BASE_URL, LOCAL_MI210_B_URL)
 
 
@@ -81,11 +82,13 @@ class Spend:
     total_usd: float = 0.0
     calls: int = 0
     by_model: dict = field(default_factory=dict)
+    _lock: threading.Lock = field(default_factory=threading.Lock)
 
     def add(self, model: str, cost: float) -> None:
-        self.total_usd += cost
-        self.calls += 1
-        self.by_model[model] = self.by_model.get(model, 0.0) + cost
+        with self._lock:
+            self.total_usd += cost
+            self.calls += 1
+            self.by_model[model] = self.by_model.get(model, 0.0) + cost
 
     def report(self) -> str:
         lines = [f"${self.total_usd:.4f} across {self.calls} calls"]
@@ -104,15 +107,14 @@ class MetaClient:
 
     @classmethod
     def local(cls) -> MetaClient:
-        """Self-hosted Muse Glimmer on KU HPC (free). Requires the ssh
-        tunnel on :20007 (kept alive by a user-level watchdog job)."""
+        """Self-hosted Muse Glimmer (free) — requires the local tunnel
+        on LOCAL_BASE_URL."""
         return cls(api_key="ollama", base_url=LOCAL_BASE_URL)
 
     @classmethod
     def local_mi210(cls) -> MetaClient:
-        """Self-hosted Muse Glimmer on a MI210 via llama.cpp rocm (~44 tok/s).
-        Tunnel on :20009 (watchdog-maintained).
-        Falls back to the staggered instance on :20010 on connection error."""
+        """Self-hosted Muse Glimmer, GPU instance with automatic
+        failover to a second tunnel on connection error."""
         c = cls(api_key="llama", base_url=LOCAL_MI210_BASE_URL)
         c._fallback_bases = (LOCAL_MI210_BASE_URL, LOCAL_MI210_B_URL)
         return c
@@ -120,10 +122,13 @@ class MetaClient:
     @classmethod
     def fireworks(cls) -> MetaClient:
         """Fireworks.ai hosted inference (OpenAI-compatible) — bulk
-        System-1 triage. Credits billing is external; key from
-        FIREWORKS_API_KEY (source ~/env/fireworks-key)."""
-        return cls(api_key=os.environ["FIREWORKS_API_KEY"],
-                   base_url=FW_BASE_URL)
+        System-1 triage. Key from FIREWORKS_API_KEY."""
+        try:
+            key = os.environ["FIREWORKS_API_KEY"]
+        except KeyError:
+            raise SystemExit("FIREWORKS_API_KEY is not set "
+                             "(export it or use --backend local)")
+        return cls(api_key=key, base_url=FW_BASE_URL)
 
     def list_models(self) -> list[str]:
         r = self._http.get(f"{self.base}/models", timeout=30)
