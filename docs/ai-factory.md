@@ -29,32 +29,39 @@ release gate curado.
 ENTRADA = APHIS/GBIF/ERA5; JUDGE = fit_judge (S1 sobre audit metrics);
 S2 = wonder diagnosticando fits patológicos. Ver system-escalation.md.
 
-## Instancia 2: litmine — parásito↔hospedero (diseño)
+## Instancia 2: litmine "system zero" — extractor general parásito↔hospedero
 
-Mejora sobre cochliomyia_hominivorax v5 (hoy: listas de nombres
-extraídas por PubTator3 -> CSV). El salto: de **entidades** a
-**relaciones con evidencia**.
+Producto: un **extractor zero-shot** de pares parásito-hospedero —
+cualquier taxón, cualquier paper, sin código por especie.
+cochliomyia_hominivorax (el pipeline del gusano barrenador, que hoy
+solo extrae listas de nombres por PubTator3) queda como **corpus de
+validación**, no como el producto. La generalidad la da PubTator3:
+su NER linkea cualquier taxón mencionado a NCBI TaxID — el extractor
+no necesita saber qué especies existen.
 
 ```
-ENTRADA  PubMed/PMC query -> PubTator3 API
-         (entities ya linkeadas: species->NCBI TaxID, diseases->MESH
-         — la normalización de sinónimos viene gratis, no regex)
-SPEC     cola de papers por staleness/cobertura de query;
-         budget diario de tokens
-BUILDER  por paper: abstract + anotaciones -> LLM tipado:
+ENTRADA  scope configurable: (parasite_taxa?, host_taxa?, query) ->
+         PubMed/PMC ids -> PubTator3 annotations API
+         (entities linkeadas: species->TaxID, diseases->MESH)
+SPEC     cola de papers por staleness; budget diario de tokens;
+         dedupe por pmid+span antes de llamar al LLM
+BUILDER  por paper: abstract + anotaciones -> LLM tipado, prompt
+         agnóstico de taxón:
          {parasite_taxid, host_taxid,
-          relation: parasite_of|host_of|vector_of|reservoir_of,
+          relation: parasite_of|host_of|vector_of|reservoir_of|
+                    intermediate_host_of|dead_end,
           evidence_span, confidence}
          — el LLM no hace NER, hace RELACIÓN sobre entidades ya
          anotadas: más barato y auditable (el span está anclado)
-JUDGE    S1 re-lee la evidencia contra el span (self-consistency);
-         dedupe por (para_taxid, host_taxid, pmid)
-ESCALATE confianza baja | taxón fuera de backbone | relación que
-         contradice arista existente -> S2 wonder
-PRODUC   interactions.parquet (parasite_taxid, host_taxid, relation,
-         pmid, evidence, confidence, run_id)
-BRAIN    ledger: papers procesados, pares nuevos, precision en
-         muestra revisada
+JUDGE    S1 re-lee evidencia contra el span (self-consistency);
+         verifica que ambos TaxIDs existen y que parasite!=host
+ESCALATE confianza baja | TaxID fuera de backbone | arista que
+         contradice el grafo existente -> S2 wonder
+PRODUC   interactions.parquet — grafo general, no por-organismo:
+         (parasite_taxid, host_taxid, relation, pmid, evidence,
+          confidence, run_id, scope_id)
+BRAIN    ledger por scope: papers, pares nuevos, precision en
+         muestra revisada — el grafo crece por runs incrementales
 ```
 
 ## La integración que vale el proyecto
@@ -70,13 +77,17 @@ BRAIN    ledger: papers procesados, pares nuevos, precision en
 
 ## Orden de construcción
 
-1. `litmine/` extractor: PubTator3 annotate -> typed relation LLM
-   (schema primero, igual que fit_judge)
-2. calibration set ~100 oraciones etiquetadas -> precision/recall real
+1. `litmine/` extractor general: scope->PMIDs->PubTator3 annotate
+   -> typed relation LLM (schema primero, igual que fit_judge)
+2. calibration set ~100 oraciones del corpus cochliomyia
+   (primer benchmark del extractor general) -> precision/recall real
 3. judge S1 + escalate S2 con caps de budget
 4. interactions.parquet -> adapter a `species_labels`
-5. ledger + primera corrida full sobre el corpus cochliomyia
+5. ledger + primera corrida full (corpus cochliomyia como validación;
+   luego scopes amplios: helmintos, protozoos, ectoparásitos)
 
 Non-goal: re-anotar lo que PubTator3 ya linkea (usar sus TaxIDs,
 no inventar nombres); no construir el grafo completo hasta que la
-precision del extractor esté medida.
+precision del extractor esté medida; nada de lógica por-especie —
+si un caso necesita código específico de taxón, va al calibration
+set, no al extractor.
