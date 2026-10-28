@@ -43,6 +43,11 @@ no necesita saber qué especies existen.
 ENTRADA  scope configurable: (parasite_taxa?, host_taxa?, query) ->
          PubMed/PMC ids -> PubTator3 annotations API
          (entities linkeadas: species->TaxID, diseases->MESH)
+S0       filtro de relevancia PRE-LLM sobre el corpus:
+         el modelo PU-learning ya entrenado (abstractsHostParasites
+         repo, pu_learning_model_*.rds) + corpora etiquetados
+         zover_gmpd/lacs/df_parasites (class) como train;
+         solo abstracts relevantes pagan tokens de relación
 SPEC     cola de papers por staleness; budget diario de tokens;
          dedupe por pmid+span antes de llamar al LLM
 BUILDER  por paper: abstract + anotaciones -> LLM tipado, prompt
@@ -63,6 +68,16 @@ PRODUC   interactions.parquet — grafo general, no por-organismo:
 BRAIN    ledger por scope: papers, pares nuevos, precision en
          muestra revisada — el grafo crece por runs incrementales
 ```
+
+## Capa de datos
+
+| Fuente | Rol en la fábrica |
+|---|---|
+| PubTator3 API | NER linkeado (TaxID/MESH) — generalidad del extractor |
+| ZOVER (mgc.ac.cn) | aristas curadas virus/huésped/vector zoonótico — semilla del grafo + eval |
+| GMPD | aristas mamífero-parásito — semilla del grafo |
+| abstractsHostParasites repo | corpus curado: zover (380), gmpd (1.8MB), zover_gmpd/lacs/df_parasites/parasiteAbstracts **etiquetados**, df_abstracts_random (negativos para calibración) |
+| pu_learning_model (rds) | filtro S0 de relevancia reutilizable |
 
 ## La integración que vale el proyecto
 
