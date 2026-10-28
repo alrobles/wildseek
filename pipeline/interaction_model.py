@@ -44,12 +44,23 @@ def build_pairs():
     inter["host_key"] = resolve_hosts(inter, uni)
     m = inter[inter.host_key.notna()].copy()
     m["host_key"] = m.host_key.astype(np.int64)
+    # judge-verified edges define positives when available; unverified
+    # edges only still count (they're candidate signal, weaker)
+    m["v"] = m.verified.fillna(False).astype(str).str.lower() == "true"
+    n_ver = int(m.v.sum())
+    print(f"resolved edges: {len(m)} ({n_ver} judge-verified)")
 
     species = sorted(m.host_key.unique())
-    pos = set()
-    for ks in m.groupby("parasite_norm").host_key.unique():
-        if 1 < len(ks) <= 60:
-            pos.update(combinations(sorted(ks), 2))
+    mv = m[m.v]
+    def shared_pairs(frame):
+        out = set()
+        for ks in frame.groupby("parasite_norm").host_key.unique():
+            if 1 < len(ks) <= 60:
+                out.update(combinations(sorted(ks), 2))
+        return out
+    pos = shared_pairs(mv) if len(shared_pairs(mv)) >= 200 else shared_pairs(m)
+    print(f"positive pairs: {len(pos)} "
+          f"({'verified-edges' if pos == shared_pairs(mv) else 'all-edges'})")
     all_pairs = set(combinations(species, 2))
     neg = all_pairs - pos
     rows = ([(a, b, 1) for a, b in pos] +
