@@ -97,6 +97,16 @@ def main():
     sec["key"] = (sec.pmid.astype(str) + "|" + sec.section_type + "|" +
                   sec.offset.astype(str))
     chunks = sec.merge(yes[["key"]].drop_duplicates(), on="key")
+    # resume: drop chunks already present in --out (same key)
+    if os.path.exists(args.out):
+        try:
+            prev = pd.read_csv(args.out, usecols=["pmid", "section_type",
+                                                "offset"])
+            prev_k = (prev.pmid.astype(str) + "|" + prev.section_type +
+                      "|" + prev.offset.astype(str))
+            chunks = chunks[~chunks.key.isin(set(prev_k))]
+        except Exception:
+            pass
     if args.limit:
         chunks = chunks.head(args.limit)
     print(f"YES chunks: {len(yes)} | to extract: {len(chunks)}",
