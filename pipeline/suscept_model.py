@@ -29,7 +29,7 @@ REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 BASE_FEATS = ["max_j_env_pos", "max_j_geo_pos", "min_d_phy_pos"]
 EXT_FEATS = ["mean_j_env_pos5", "mean_j_geo_pos5"]
-IND_FEATS = ["has_env", "has_geo", "has_phy"]
+IND_FEATS = ["has_env", "has_geo", "has_phy", "is_patristic_real"]
 GRID_C = [0.01, 0.1, 1.0, 10.0]     # L2 grid for the logistic model
 N_SPLITS = 5
 PERM_REPEATS = 10

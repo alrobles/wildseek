@@ -196,6 +196,18 @@ def build(base, out=None):
         "mean_j_env_pos5", "mean_j_geo_pos5",
         "phy_source", "has_env", "has_geo", "has_phy"])
 
+    # scale fix: patristic distances (Myr) and taxa-proxy ranks (0.2-1)
+    # live on incompatible scales — normalize each source to [0,1] and
+    # keep an explicit indicator so the model can separate them.
+    frame["is_patristic_real"] = (frame.phy_source == PHY_REAL) \
+        .astype(float)
+    for src in (PHY_REAL, PHY_PROXY):
+        m = frame.phy_source == src
+        v = frame.loc[m, "min_d_phy_pos"]
+        rng = v.max() - v.min()
+        if len(v) and np.isfinite(rng) and rng > 0:
+            frame.loc[m, "min_d_phy_pos"] = (v - v.min()) / rng
+
     # ---- sanity: no feature may be a self-reference
     pos_rows = frame[frame.label == 1]
     if len(pos_rows) == 1:
