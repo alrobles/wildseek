@@ -40,6 +40,17 @@ MODEL_LOCAL = "muse-glimmer"                     # self-hosted 30B on KU HPC
 FW_BASE_URL = "https://api.fireworks.ai/inference/v1"
 MODEL_FW_JUDGE = "accounts/fireworks/models/muse-spark-open"
 FW_PRICES = {MODEL_FW_JUDGE: (0.90, 0.90, 0.90)}   # ~per 1M tok
+
+# Inception Labs Mercury (OpenAI-compatible) — 100M free tokens; fast
+# diffusion LLM for boilerplate-speed S1 work. Key via
+# INCEPTION_API_KEY (source ~/env/inception-mercury-key).
+INC_BASE_URL = "https://api.inceptionlabs.ai/v1"
+MODEL_INC_JUDGE = "mercury-3"       # 1M ctx, reasoning_effort param
+MODEL_INC_FAST = "mercury-2.5"      # prev gen, 260K ctx
+INC_PRICES = {                      # 50%-off launch prices
+    MODEL_INC_JUDGE: (0.01, 0.10, 0.35),
+    MODEL_INC_FAST: (0.02, 0.20, 0.75),
+}
 LOCAL_BASE_URL = "http://127.0.0.1:20007/v1"     # ssh tunnel -> ollama job (Q6000)
 LOCAL_MI210_BASE_URL = "http://127.0.0.1:20009/v1"  # ssh tunnel -> llama.cpp rocm (MI210 inst a)
 LOCAL_MI210_B_URL = "http://127.0.0.1:20010/v1"     # instancia b escalonada (failover)
@@ -65,7 +76,8 @@ class Usage:
         )
 
     def cost_usd(self, model: str) -> float:
-        cached_in, pin, pout = PRICES.get(model, (0.0, 0.0, 0.0))
+        cached_in, pin, pout = PRICES.get(
+            model, FW_PRICES.get(model, INC_PRICES.get(model, (0.0, 0.0, 0.0))))
         billable = self.prompt_tokens - self.cached_tokens
         return (
             billable * pin + self.cached_tokens * cached_in + self.completion_tokens * pout
@@ -120,6 +132,14 @@ class MetaClient:
         FIREWORKS_API_KEY (source ~/env/fireworks-key)."""
         return cls(api_key=os.environ["FIREWORKS_API_KEY"],
                    base_url=FW_BASE_URL)
+
+    @classmethod
+    def inception(cls) -> MetaClient:
+        """Inception Labs Mercury (OpenAI-compatible) — fast diffusion
+        LLM; 100M free tokens. Key from INCEPTION_API_KEY
+        (source ~/env/inception-mercury-key)."""
+        return cls(api_key=os.environ["INCEPTION_API_KEY"],
+                   base_url=INC_BASE_URL)
 
     def list_models(self) -> list[str]:
         r = self._http.get(f"{self.base}/models", timeout=30)
