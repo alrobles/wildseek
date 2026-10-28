@@ -131,6 +131,32 @@ $0.00-0.05/día en fireworks. El grafo se vuelve **vivo** — eso es lo
 que se vende: "literature surveillance as a service" para nuestro
 propio modelo y como artefacto publicable por separado.
 
+## Protocolo de validación — la tesis medible
+
+Dos fábricas, un experimento:
+
+```
+train:    labels conocidos (ZOVER/GMPD/corpus curado)
+          -> suscept_model: phy-dist + env + geo -> p_host
+predict:  p_host para especies sin label
+validate: edges minados por litmine que NO estaban en training
+          -> AUC / PR de p_host contra el test-set minado
+```
+
+La tesis: "la distancia filogenética+ambiental+geográfica predice
+qué hospederos comparten un parásito". Y el monitor la hace
+**prospectiva**: cada paper nuevo valida predicciones ya emitidas.
+
+Advertencias del diseño:
+- Independencia parcial: DBs curadas salieron de la misma
+  literatura — validar por FAMILIA de evidencia (PMIDs que ningún
+  label de training citó = validación fuerte; mismos PMIDs =
+  consistencia, no validación)
+- Ruido del extractor entra al denominador — validar solo edges
+  judge-verificados con confidence >= umbral
+- `no_detection` minado = negativos reales que ninguna DB trae ->
+  permite medir ESPECIFICIDAD, no solo recall
+
 ## La integración que vale el proyecto
 
 `interactions.parquet` es un **EvidenceFeed más de WildSeek**:
