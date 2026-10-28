@@ -1,16 +1,21 @@
-"""Approver — quorum 3/4 de cuatro revisores (docs/FACTORY.md).
+"""Approver — quorum 3/4 de cuatro revisores + veto de costo
+(docs/FACTORY.md).
 
   codigo    gates duros: conteos, bounds, PNGs no vacios, geojson valido
   seguridad la corrida no colapsa datos vs. el run previo
   ux        meta.json completo + archivos que lee el frontend existen
   brain     muse-spark lee el manifest y emite veredicto razonado
+  costo     VETO: spend del run en agent_calls.jsonl <= QA_COST_CAP_USD
 
-Aprueba si codigo+seguridad pasan Y >=3/4 en total. El resultado cae en
-<serve>/qa_report.json; el fallo bloquea deploy y escala al canal humano.
+Aprueba si codigo+seguridad pasan Y >=3/4 en total Y el veto de costo
+no dispara. El resultado cae en <serve>/qa_report.json; el fallo
+bloquea deploy y escala al canal humano.
 """
 from __future__ import annotations
 
 import json
+import os
+import time
 from pathlib import Path
 
 import pandas as pd
@@ -123,17 +128,45 @@ def _brain(man: dict | None) -> list[dict]:
                  "value": f"abstain: {ex}"[:120]}]
 
 
+def _costo(data: Path, since_ts: float | None = None,
+           cap: float | None = None) -> list[dict]:
+    """Cost veto (G4): sum the call ledger since `since_ts` (default:
+    last 24h) and veto the whole run if spend exceeds the cap.
+    Missing ledger -> no spend happened -> ok."""
+    cap = cap if cap is not None else float(
+        os.environ.get("QA_COST_CAP_USD", "5.0"))
+    since = since_ts or (time.time() - 86400)
+    ledger = data / "agent_calls.jsonl"
+    spent = 0.0
+    n = 0
+    if ledger.exists():
+        for line in ledger.read_text().splitlines():
+            try:
+                r = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            if r.get("ts", 0) >= since:
+                spent += float(r.get("usd", 0) or 0)
+                n += 1
+    return [{"name": f"run spend <= ${cap:.2f}",
+             "ok": spent <= cap,
+             "value": f"${spent:.4f} across {n} calls"}]
+
+
 def check(serve: Path | str = "app/data", data: Path | str = "data",
           manifest: dict | None = None) -> dict:
     serve, data = Path(serve), Path(data)
     reviews = {"codigo": _codigo(serve), "seguridad": _seguridad(serve, data),
                "ux": _ux(serve), "brain": _brain(manifest)}
     verdict = {k: all(c["ok"] for c in v) for k, v in reviews.items()}
+    cost = _costo(data)
+    cost_ok = all(c["ok"] for c in cost)
     n_pass = sum(verdict.values())
     hard = verdict["codigo"] and verdict["seguridad"]
-    passed = hard and n_pass >= 3
+    passed = hard and n_pass >= 3 and cost_ok
     report = {"pass": passed, "verdict": verdict,
-              "quorum": f"{n_pass}/4", "reviews": reviews}
+              "quorum": f"{n_pass}/4", "reviews": reviews,
+              "cost_veto": cost, "cost_ok": cost_ok}
     (serve / "qa_report.json").write_text(json.dumps(report, indent=1))
     return report
 

@@ -31,6 +31,16 @@ sistema escalable de priorización parásito↔hospedero con tres ejes:
 - `nightly.py` robusto: env-parametrizado, self-heal detrás de flag.
 - Release gate curado → público `main` pusheado limpio (docs internos
   excluidos vía `release.exclude`).
+- **2026-10-28**: `dist_frame` normaliza `min_d_phy_pos` por fuente
+  (patristic vs taxa_proxy) + indicador `is_patristic_real`; re-run
+  suscept_model (5-fold ×20): logreg ROC **0.850±0.031** → métricas
+  bakeadas en `metrics.json`. We-called-it: **15 predicciones
+  congeladas 2026-10-28** (`we_called_it.json`, `/we-called-it`);
+  `--check` solo confirma con PMID **post-freeze** (bug corregido:
+  antes flipeaba con cualquier arista). `/decisions` + tarjeta delta
+  (switch_to ejecutable visible). Exposure: poultry (county) y
+  dairy herds (state) **separados** — toggle en UI. Supply chain:
+  60.1M egg-layer birds (73% del total APHIS).
 
 ### litmine (fábrica 2) — trazas verificables
 
@@ -43,6 +53,16 @@ sistema escalable de priorización parásito↔hospedero con tres ejes:
 | Barrido corpus ZOVER | 348 DOIs → 165 PMIDs → 119 papers anotados → **217 aristas, $0.0000, 119 llamadas** |
 | Distribución relaciones | parasite_of 182 · reservoir_of 29 · no_detection 3 · host_of 2 · intermediate_host_of 1 |
 | Backends LLM | Fireworks `muse-spark-open` verificado (crédito $100, reasoning model); glimmer/MI210 self-host; spark API pago — cascada ya cableada en `MetaClient` |
+| **2026-10-28 (noche autónoma)** | |
+| PMC full-text ZOVER | 83/119 papers OA → **3,165 pasajes** (`sections_zover`) |
+| Triage zover | 3,165 chunks → **721 YES (23%)**, ahorro tokens ~74%, **$1.93 spark-open** |
+| Extracción Capa 2 gold | 303 YES → **740 aristas, $0.51** — `extract_full.py` name-level |
+| Eval full-text gold | **56% pair-recall (64/115)** vs 16% abstracts — **3.4×** — `eval_full.py` |
+| Auditoría 30 aristas (glimmer) | precisión cruda **73%**; subconjunto judge-verified **100%** (12/12) — el JUDGE capturó los 8 falsos positivos |
+| `verify.py` JUDGE | glimmer self-host, verdict+reason por arista; zover **88/212 (42%)**; fulltext en curso |
+| Leakage audit v2 | 720 pares únicos, **0% leakage 2020+** (22 pares limpios); 1 par pre-2020 filtrado — `leakage_audit.md` |
+| Costo/edge | **$0.0014** (ledger JSONL por llamada — `agent_calls.jsonl`) |
+| Fail-closed | `dist_frame` rechaza <2 ejes con cobertura; test `test_dist_frame.py` |
 | Capa de datos | ZOVER 5.9k muestras (geo+tejido+BioSample), VIRION gold 283 aristas/33 PMIDs (benchmark, licencia respetada), corpus etiquetado + `score` PU precomputado, `df_abstracts_random` negativos |
 | Infra corpus | `/kuhpc/.../pubmed` baseline 2026 completo (166G + FTS index); `crawl.ecoseek.org` para fuentes JS-walled |
 | Motor PU formal | `xplus` (alrobles/xplus-devel) como slot swappable del suscept_model — automatización+finetuning en desarrollo paralelo |
@@ -78,10 +98,13 @@ sistema escalable de priorización parásito↔hospedero con tres ejes:
 
 ## 5. Puertas (gates)
 
-- **G1 — precision del extractor**: muestra ~30 aristas revisada a mano;
-  si precision <0.8 → ajustar prompt/judge ANTES de escalar corpus.
-- **G2 — full-text antes de grafo**: no construir `interactions.parquet`
-  final hasta tener pase full-text; sin él el recall real queda ~16%.
+- **G1 — precision del extractor**: auditoría de 30 aristas (glimmer):
+  precisión cruda 73% <0.8 → **el JUDGE stage ya existía y lo resuelve**:
+  subconjunto verificado = 100% (12/12). Pendiente: confirmación humana
+  (muestra manual) para cerrar formalmente.
+- **G2 — full-text antes de grafo**: ✅ RESUELTA — `extract_full.py`
+  sobre chunks YES: 56% recall vs 16% abstract (3.4×). Grafo puede
+  construirse sobre aristas verificadas.
 - **G3 — calibración antes de S2**: `fit_judge` debe superar baseline
   de reglas (`decide_tail`) sobre ~150 spp etiquetadas antes de
   escalar a wonder.
