@@ -19,13 +19,15 @@ PRODUC    artefactos versionados + verificación en destino
 BRAIN     manifest por run + ledger de decisiones (se aprende de esto)
 ```
 
-Sustrato compartido: `MetaClient` (spark-1.3 = S1 pago,
+Sustrato compartido: `MetaClient`. **Regla del hackathon (Meta):
+el stack del producto es exclusivamente Muse** —
 muse-spark-open@fireworks = **S1 extracción bulk — el tier asignado
-del pipeline**, glimmer = S1 gratis self-host, wonder-1.0 = S2),
-manifest JSON por run, quorum de review, release gate curado.
-Backends fuera del pipeline: mercury-3 (Inception, dev/boilerplate
-tooling); `mercury-decide` = candidato al tier judge (decisiones
-tipadas a $0.02/M input, output gratis).
+del pipeline**, muse-glimmer = S1 gratis self-host,
+muse-spark-1.3 = S1 pago (fallback), muse-wonder-1.0 = S2.
+Cualquier modelo no-Muse (mercury-3, etc.) es tooling de desarrollo
+interno y NO aparece en el producto, el submission ni la narrativa.
+`mercury-decide` solo se evalúa como judge interno si la precisión
+lo justifica — la decisión final siempre la registra un modelo Muse.
 
 ## Instancia 1: WildSeek (existe)
 
