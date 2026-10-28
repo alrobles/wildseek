@@ -33,15 +33,18 @@ def judge(client, model, e):
                     "host": e.get("host") or e.get("host_texts"),
                     "rel": e.get("relation"),
                     "span": str(e.get("evidence_span", ""))[:300]})
-    r = client.chat(model=model, temperature=0, max_tokens=200,
-                    messages=[{"role": "system", "content": SYS},
-                              {"role": "user", "content": q}])
-    m = re.search(r"\{[^{}]*\}", r["content"] or "")
-    try:
-        d = json.loads(m.group(0)) if m else {}
-    except json.JSONDecodeError:
-        d = {}
-    return d.get("ok"), str(d.get("why", ""))[:80]
+    for _ in range(2):
+        r = client.chat(model=model, temperature=0, max_tokens=200,
+                        messages=[{"role": "system", "content": SYS},
+                                  {"role": "user", "content": q}])
+        m = re.search(r"\{[^{}]*\}", r["content"] or "")
+        try:
+            d = json.loads(m.group(0)) if m else {}
+        except json.JSONDecodeError:
+            d = {}
+        if "ok" in d:
+            return d.get("ok"), str(d.get("why", ""))[:80]
+    return None, "no-json"
 
 
 def main():
@@ -66,7 +69,8 @@ def main():
         todo = todo.head(args.limit)
     print(f"edges {len(df)} | to verify {len(todo)}", file=sys.stderr)
 
-    client = {"local": MetaClient.local_mi210,
+    client = {"local": MetaClient.local,
+              "local_mi210": MetaClient.local_mi210,
               "fireworks": MetaClient.fireworks,
               "meta": MetaClient}[args.backend]()
     model = args.model or ("muse-glimmer" if args.backend == "local"

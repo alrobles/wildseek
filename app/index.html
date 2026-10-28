@@ -217,7 +217,7 @@ async function load() {
         `${m.model.positives}/${m.model.species} labeled</span>` : "") +
       (m.litmine ? `<br><span class="sub">litmine: ${m.litmine.edges}` +
         ` edges · ${m.litmine.papers} papers · $${m.litmine.cost_usd}` +
-        ` total</span>` : "");
+        ` total · $${m.litmine.cost_per_edge_usd}/edge</span>` : "");
   } catch(e) { document.getElementById("mxlist").textContent =
     "metrics unavailable"; }
 

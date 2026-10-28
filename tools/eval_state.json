@@ -19,7 +19,7 @@
   "D1_live": 1,
   "D2_video": 0.5,
   "D3_ticker": 1.0,
-  "D4_cost": 0,
+  "D4_cost": 1.0,
   "D5_backup": 0,
   "H1_craft": 0.5,
   "H2_leak": 1.0,
@@ -234,6 +234,20 @@
     "impact": 6.25,
     "tooling": 8.0,
     "demo": 5.75,
+    "depth": 6.25
+   },
+   "p1": 0.99
+  },
+  {
+   "ts": "2026-10-28T07:46:40.260431+00:00",
+   "set": [
+    "D4_cost",
+    1.0
+   ],
+   "scores": {
+    "impact": 6.25,
+    "tooling": 8.0,
+    "demo": 7.25,
     "depth": 6.25
    },
    "p1": 0.99
