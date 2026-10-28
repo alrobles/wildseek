@@ -9,6 +9,11 @@
 library(ape)
 
 TREE <- Sys.getenv("WILDSEEK_MAMMAL_TREE", "data/v6_point.nwk")
+if (!file.exists(TREE)) {
+  stop("mammal tree not found at '", TREE, "': it is pre-existing lab ",
+       "infra, not shipped with this repo. Set WILDSEEK_MAMMAL_TREE ",
+       "(see NEW.md).")
+}
 W <- read.csv("data/species_winner.csv", stringsAsFactors = FALSE)
 W$u <- gsub(" ", "_", W$species)
 

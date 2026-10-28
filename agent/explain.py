@@ -44,7 +44,8 @@ You write terse HPAI surveillance briefs for wildlife-agriculture
 interfaces. Given catalog facts (recent detections, susceptible
 species, fit diagnostics), emit the structured brief. Do not invent
 detections or species not present in the input. sampling_rec is one
-concrete action."""
+concrete WILDLIFE sampling action for professionals; never
+personal-health advice."""
 
 
 def explain(kind: str, ident: str, data_dir: Path | str,

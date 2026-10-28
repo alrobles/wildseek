@@ -86,8 +86,9 @@ def main():
     def work(r):
         try:
             d, u = triage_chunk(client, model, r.text)
-            return {**r[["key", "pmid", "pmcid", "section_type",
-                         "offset"]].to_dict(),
+            rd = r._asdict() if hasattr(r, "_asdict") else r
+            return {k: rd[k] for k in
+                    ("key", "pmid", "pmcid", "section_type", "offset")} | {
                     "relevant": d.get("relevant"),
                     "hosts": "; ".join(d.get("hosts") or []),
                     "parasites": "; ".join(d.get("parasites") or []),

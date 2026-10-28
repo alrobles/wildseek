@@ -22,11 +22,12 @@ import time
 
 import duckdb
 
-_USER = os.environ.get("USER", "")
-DB = os.environ.get(
-    "WILDSEEK_GBIF_DB",
-    f"/kuhpc/work/kbs/{_USER}/gbifdata/gbif_thinned_120.duckdb"
-    if _USER else "")
+DB = os.environ.get("WILDSEEK_GBIF_DB", "")
+if not DB:
+    raise SystemExit(
+        "WILDSEEK_GBIF_DB is not set: the GBIF duckdb mirror is "
+        "pre-existing lab infra, not shipped with this repo. "
+        "Set WILDSEEK_GBIF_DB (see docs/data-sources.md).")
 OUT = os.environ.get("WILDSEEK_BEEG", ".")
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import domain

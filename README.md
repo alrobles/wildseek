@@ -1,8 +1,13 @@
 # WildSeek — wildlife susceptibility monitor
 
+Ecological surveillance for wildlife professionals — not medical advice.
+
 **Meta Global AI Developer Hackathon — Indie track** · live demo: `wildseek.ecoseek.org`
 
 A living host-susceptibility + supply-chain risk monitoring system.
+
+> *WildSeek is an ecological surveillance research tool for wildlife
+> professionals. Not medical advice, not for personal health decisions.*
 Extends the three-distance ML framework from
 [Robles-Fernández et al. 2022, PNAS](https://doi.org/10.1073/pnas.2122851119)
 — geographic, environmental, and phylogenetic distances — into a
@@ -67,8 +72,10 @@ the risk zone.
 - Living host list: agentic literature mining → provenance-tracked
   evidence (OpenAlex → typed JSON).
 
-Pre-hackathon baseline is tagged `pre-hackathon` in upstream repos;
-work submitted here was built during Oct 26 – Nov 4, 2026.
+Pre-hackathon baseline lives in upstream repos predating the event
+(xnicher v1.0.0 released 2026-09-06, oneearthr v1.0.0 released
+2026-09-16; phyloseek-devel/geoseek-devel are unversioned lab code —
+see NEW.md); work submitted here was built during Oct 26 – Nov 4, 2026.
 
 ## Layout
 

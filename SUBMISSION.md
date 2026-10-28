@@ -7,9 +7,13 @@ releases; development lives in a separate private repo).
 
 ## What it is
 
+Ecological surveillance for wildlife professionals — not medical advice.
+
 Wildlife HPAI susceptibility + U.S. supply-chain risk monitor —
 the first disease on an agentic wildlife-risk platform designed
-to generalize to further pathogens.
+to generalize to further pathogens. Ecological surveillance for
+wildlife professionals — not medical advice, not for personal
+health decisions.
 
 Three layers, all computed during the event window:
 

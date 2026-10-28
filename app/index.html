@@ -41,6 +41,7 @@
 <div id="map"></div>
 <div id="panel">
   <h1>WildSeek — HPAI Monitor</h1>
+  <div class="stat">Ecological surveillance for wildlife professionals — not medical advice.</div>
   <div class="stat" id="meta">loading…</div>
 
   <div class="card">
@@ -53,7 +54,7 @@
 
   <h2>Layers</h2>
   <div class="layer"><label><input type="checkbox" id="ckRisk" checked>
-    risk (detection × susceptibility)</label></div>
+    surveillance priority (detection × susceptibility)</label></div>
   <div class="layer"><label><input type="checkbox" id="ckRsv">
     reservoir community</label>
     <select id="rsvMode" style="margin-left:16px;font-size:11px">
@@ -277,7 +278,7 @@ async function explainWatershed(huc) {
     document.getElementById("ccTitle").textContent =
       b.headline || `watershed ${huc}`;
     document.getElementById("ccSub").textContent =
-      b.risk_level ? `risk level: ${b.risk_level}` : "";
+      b.risk_level ? `priority: ${b.risk_level}` : "";
     document.getElementById("ccBody").innerHTML =
       (b.drivers || []).map(d=>"• "+esc(d)).join("<br>") +
       (b.sampling_rec ? `<br><br>${esc(b.sampling_rec)}` : "");
@@ -287,5 +288,10 @@ async function explainWatershed(huc) {
 }
 map.on("load", load);
 </script>
+<footer style="position:fixed;bottom:0;left:0;right:0;padding:4px 10px;
+ font:11px/1.4 sans-serif;color:#888;background:#ffffffee;z-index:1000;
+ text-align:center">WildSeek is an ecological surveillance research tool
+ for wildlife professionals. Not medical advice, not for personal health
+ decisions.</footer>
 </body>
 </html>

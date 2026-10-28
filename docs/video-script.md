@@ -1,5 +1,9 @@
 # WildSeek — 3-minute demo script
 
+On-screen footer throughout: "Ecological surveillance for wildlife
+professionals — not medical advice." Badge "built during the event"
+fixed under the video for its whole duration.
+
 ## Cold open — required declaration (0:00–0:12)
 - Screen: single slate, two columns: "pre-existing" (xnicher,
   oneearthr, the PNAS 2022 three-distance framework, phyloseek
