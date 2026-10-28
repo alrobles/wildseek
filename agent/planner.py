@@ -26,6 +26,9 @@ import pandas as pd
 class RunSpec:
     stages: dict = field(default_factory=lambda: {
         "risk": True, "labels": False, "refit": False})
+    # FACTORY.md criticality: routine = fresh detections only (ships
+    # direct); critical = labels/refit or data anomaly -> human flag
+    criticality: str = "routine"
     new_detections: int = 0
     new_species: list = field(default_factory=list)
     new_counties: int = 0
@@ -42,6 +45,7 @@ def plan(data_dir: Path | str = "data",
     if not sp.exists():
         spec.reasons.append("no species parquet — full build")
         spec.stages["labels"] = spec.stages["refit"] = True
+        spec.criticality = "critical"
         return spec
 
     det = pd.concat([
@@ -84,6 +88,8 @@ def plan(data_dir: Path | str = "data",
         spec.stages["labels"] = spec.stages["refit"] = True
         spec.reasons.append(
             f"{len(new_sp)} new host species: {', '.join(new_sp[:6])}")
+    if spec.stages["refit"] or spec.stages["labels"]:
+        spec.criticality = "critical"
     if not spec.reasons:
         spec.reasons.append("routine refresh")
     return spec
