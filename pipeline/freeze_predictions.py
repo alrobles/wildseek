@@ -44,8 +44,37 @@ def freeze() -> dict:
     return card
 
 
+def _pmid_pubdate() -> dict:
+    """pmid -> publication date (YYYY-MM-DD best effort) so an edge can
+    only confirm a prediction when the paper POSTDATES the freeze."""
+    import re
+    import pandas as pd
+    out = {}
+    try:
+        c = pd.read_csv("data/litmine/zover_corpus.csv")
+        doi2date = {str(r.doi).strip().lower(): str(r.date)
+                    for r in c.itertuples() if pd.notna(r.doi)}
+        p = pd.read_csv("data/litmine/zover_pmids.csv")
+        for r in p.itertuples():
+            d = doi2date.get(str(r.doi).strip().lower())
+            if d:
+                out[re.sub(r"\D", "", str(r.pmid))] = d[:10]
+    except FileNotFoundError:
+        pass
+    try:
+        g = pd.read_csv("data/litmine/virion_ebola_lassa_gold.csv")
+        for pid_raw, yr in zip(g["PUBMED ID"], g["Year_Published"]):
+            pid = re.sub(r"\D", "", str(pid_raw))
+            if pid and pd.notna(yr) and pid not in out:
+                out[pid] = f"{int(yr)}-01-01"   # year-only -> Jan 1
+    except FileNotFoundError:
+        pass
+    return out
+
+
 def check(card: dict, edges_csv: str) -> dict:
-    """Mark predictions confirmed by a mined literature edge."""
+    """Mark predictions confirmed by a mined literature edge — only
+    when the edge's PMID was published AFTER predicted_on."""
     import pandas as pd
     edges = pd.read_csv(edges_csv)
     host = {c for c in edges.columns
@@ -54,15 +83,27 @@ def check(card: dict, edges_csv: str) -> dict:
         print("no host column in edges csv", file=sys.stderr)
         return card
     col = sorted(host)[0]
+    frozen_on = card["predicted_on"]
+    pubdate = _pmid_pubdate()
     pred_species = {p["species"].lower(): p for p in card["predictions"]}
-    for h in edges[col].dropna().astype(str):
-        for name in h.replace(";", "|").split("|"):
+    for r in edges.itertuples():
+        h = getattr(r, col, None)
+        if pd.isna(h):
+            continue
+        hit = None
+        for name in str(h).replace(";", "|").split("|"):
             key = name.strip().lower()
             if key in pred_species:
-                p = pred_species[key]
-                if p["status"] == "awaiting-confirmation":
-                    p["status"] = "confirmed"
-                    p["confirmed_by"] = col
+                hit = pred_species[key]
+        if hit is None or hit["status"] != "awaiting-confirmation":
+            continue
+        pid = str(getattr(r, "pmid", ""))
+        d = pubdate.get(pid)
+        if d is None:
+            continue          # undated paper cannot confirm a dated claim
+        if d > frozen_on:
+            hit["status"] = "confirmed"
+            hit["confirmed_by"] = f"pmid {pid} ({d})"
     return card
 
 

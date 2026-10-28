@@ -17,7 +17,9 @@ import pandas as pd
 
 LABELS = "data/host_labels.parquet"
 EDGES = ["data/litmine/edges_zover.csv",
-         "data/litmine/edges_gold33.csv"]
+         "data/litmine/edges_gold33.csv",
+         "data/litmine/edges_fulltext.csv",
+         "data/litmine/edges_zover_full.csv"]
 CORPUS = "data/litmine/zover_corpus.csv"
 REPORT = "data/litmine/leakage_audit.md"
 SPLIT_YEAR = 2020   # edges from papers >= SPLIT_YEAR = "test period"
@@ -37,10 +39,12 @@ def norm_name(s: str) -> str:
 
 def host_keys(row) -> set[str]:
     texts = str(row.get("host_texts") or "")
+    if texts in ("", "None", "nan"):
+        texts = str(row.get("host") or "")
     out = set()
     for t in re.split(r"[;|]", texts):
         t = t.strip()
-        if t:
+        if t and t.lower() not in ("nan", "none"):
             out.add(norm_name(t))
     return out
 
@@ -52,8 +56,9 @@ def main():
     pos_common = {norm_name(s) for s in pos.common_name}
 
     # pmid -> doi (zover_pmids.csv) -> paper year (zover_corpus.csv);
-    # edge `date` is the detection date, not the publication year.
-    doi2year, pmid2doi = {}, {}
+    # gold33 pmids resolve straight from the gold sheet's own
+    # Year_Published column. edge `date` is detection date, not pub year.
+    doi2year, pmid2doi, pmid2year = {}, {}, {}
     try:
         c = pd.read_csv(CORPUS)
         doi2year = {str(r.doi).strip().lower(): int(r.year)
@@ -62,6 +67,14 @@ def main():
         p = pd.read_csv("data/litmine/zover_pmids.csv")
         pmid2doi = {str(r.pmid): str(r.doi).strip().lower()
                     for r in p.itertuples()}
+    except FileNotFoundError:
+        pass
+    try:
+        g = pd.read_csv("data/litmine/virion_ebola_lassa_gold.csv")
+        for pid_raw, yr in zip(g["PUBMED ID"], g["Year_Published"]):
+            pid = re.sub(r"\D", "", str(pid_raw))
+            if pid and pd.notna(yr):
+                pmid2year[pid] = int(yr)
     except FileNotFoundError:
         pass
 
@@ -74,7 +87,8 @@ def main():
         for r in e.itertuples():
             hosts = host_keys(r._asdict())
             leaked = bool(hosts & (pos_species | pos_common))
-            year = doi2year.get(pmid2doi.get(str(r.pmid), ""), None)
+            pid = str(r.pmid)
+            year = pmid2year.get(pid) or doi2year.get(pmid2doi.get(pid, ""))
             rows.append({"pmid": str(r.pmid), "file": f,
                          "relation": r.relation,
                          "hosts": "; ".join(sorted(hosts)),
