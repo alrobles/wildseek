@@ -2,8 +2,8 @@
 as prospective validation labels for p_host.
 
 Maps each interaction's normalized host name to a universe specieskey
-(binomial match; common names don't resolve — they're not NA species
-names anyway), then reports whether p_host ranks literature-evidenced
+(binomial match first, then host_labels common_name for vernaculars),
+then reports whether p_host ranks literature-evidenced
 species above the rest — the prospective claim in numbers.
 
     python litmine/edges_to_labels.py
@@ -26,9 +26,30 @@ def main():
     uni = pd.read_csv("data/species_winner.csv")[["specieskey", "species"]]
     sus = pd.read_parquet("data/serve/susceptibility.parquet")
 
-    name2key = {norm_name(s): k for s, k in
+    name2key = {norm_name(s): k for k, s in
                 uni.itertuples(index=False)}
-    inter["host_key"] = inter["host_norm"].map(name2key)
+    # vernacular names resolve through host_labels' common_name map
+    try:
+        hl = pd.read_parquet("data/host_labels.parquet")
+        common2key = {norm_name(c): k for c, k in
+                      hl[["common_name", "specieskey"]]
+                      .dropna().itertuples(index=False)}
+    except Exception:
+        common2key = {}
+    # vernaculars not in host_labels resolve through the cached GBIF
+    # vernacular->binomial map (litmine/gbif_host_map.csv)
+    gbif2key = {}
+    try:
+        g = pd.read_csv(f"{LIT}/gbif_host_map.csv")
+        gbif2key = {norm_name(h): k for h, k in
+                    g[["host_norm", "specieskey"]]
+                    .itertuples(index=False)}
+    except Exception:
+        pass
+    k1 = inter["host_norm"].map(name2key)
+    k2 = inter["host_norm"].map(common2key).fillna(
+        inter["host_norm"].map(gbif2key))
+    inter["host_key"] = k1.astype("float64").fillna(k2)
     matched = inter[inter.host_key.notna()].copy()
     matched["host_key"] = matched.host_key.astype(np.int64)
 

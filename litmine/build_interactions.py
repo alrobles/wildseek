@@ -23,6 +23,7 @@ SOURCES = [
     ("edges_gold33.csv", "gold33-abstract"),
     ("edges_fulltext.csv", "gold33-fulltext"),
     ("edges_zover_full.csv", "zover-fulltext"),
+    ("edges_hpai.csv", "hpai-fulltext"),
 ]
 
 
