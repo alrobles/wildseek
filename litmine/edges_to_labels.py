@@ -55,8 +55,8 @@ def main():
 
     # verified edges only count double: label strength = has a
     # judge-verified edge vs any edge
-    v = (matched.verified.fillna(False).astype(str).str.lower()
-         == "true")
+    v = (matched.verified.fillna("0").astype(str).str.lower()
+         .str.replace(r"\.0$", "", regex=True).isin(["true", "1"]))
     lab = (matched.groupby("host_key")
            .agg(n_edges=("pair", "size"),
                 n_verified=("pair", lambda s: int(

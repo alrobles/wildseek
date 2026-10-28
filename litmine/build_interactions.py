@@ -57,6 +57,12 @@ def load(path: Path, source: str) -> pd.DataFrame:
 
 
 def main():
+    # canonical store is interactions.db; if present it is authoritative
+    if (Path(LIT) / "interactions.db").exists():
+        import interactions_db
+        conn = interactions_db.connect()
+        interactions_db.export(conn)
+        return
     frames = []
     for fname, source in SOURCES:
         p = Path(LIT) / fname
@@ -71,7 +77,8 @@ def main():
 
     out = Path(LIT) / "interactions.parquet"
     df.to_parquet(out, index=False)
-    v = df.verified.fillna(False).astype(str).str.lower() == "true"
+    v = (df.verified.fillna("0").astype(str).str.lower()
+         .str.replace(r"\.0$", "", regex=True).isin(["true", "1"]))
     print(f"\nwrote {out}: {len(df)} edges "
           f"({df.pair.nunique()} unique pairs, "
           f"{df.pmid.nunique()} papers)")

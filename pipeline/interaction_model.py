@@ -46,7 +46,8 @@ def build_pairs():
     m["host_key"] = m.host_key.astype(np.int64)
     # judge-verified edges define positives when available; unverified
     # edges only still count (they're candidate signal, weaker)
-    m["v"] = m.verified.fillna(False).astype(str).str.lower() == "true"
+    m["v"] = (m.verified.fillna("0").astype(str).str.lower()
+              .str.replace(r"\.0$", "", regex=True).isin(["true", "1"]))
     n_ver = int(m.v.sum())
     print(f"resolved edges: {len(m)} ({n_ver} judge-verified)")
 
