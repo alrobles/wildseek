@@ -143,6 +143,18 @@ validate: edges minados por litmine que NO estaban en training
           -> AUC / PR de p_host contra el test-set minado
 ```
 
+Motor predictivo formal: **xplus** (`alrobles/xplus-devel`, GPL>=3)
+— el framework PU-learning del paper PNAS (extensiones de
+PLUS/Zhou et al. 2022: relabeling iterativo + regresión logística
+penalizada + bootstrap ponderado + CV). El otro Devin lo está
+extendiendo a **automatización total + finetuning de
+hiperparámetros** — su slot: reemplaza el challenger
+HistGradientBoosting ad-hoc de `suscept_model.py`. Frontera:
+xplus consume `species_labels` (que litmine alimenta) y emite
+`p_host`; el protocolo de validación mide su salida contra los
+edges minados — el modelo se vuelve swappable sin tocar el
+pipeline.
+
 La tesis: "la distancia filogenética+ambiental+geográfica predice
 qué hospederos comparten un parásito". Y el monitor la hace
 **prospectiva**: cada paper nuevo valida predicciones ya emitidas.
