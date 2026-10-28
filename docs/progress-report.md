@@ -59,7 +59,7 @@ sistema escalable de priorización parásito↔hospedero con tres ejes:
 | Extracción Capa 2 gold | 303 YES → **740 aristas, $0.51** — `extract_full.py` name-level |
 | Eval full-text gold | **56% pair-recall (64/115)** vs 16% abstracts — **3.4×** — `eval_full.py` |
 | Auditoría 30 aristas (glimmer) | precisión cruda **73%**; subconjunto judge-verified **100%** (12/12) — el JUDGE capturó los 8 falsos positivos |
-| `verify.py` JUDGE | glimmer self-host, verdict+reason por arista; zover **88/212 (42%)**; fulltext en curso |
+| `verify.py` JUDGE | glimmer self-host, verdict+reason por arista; zover-abstract **88/212 (42%)**, gold33-fulltext **183/734 (25%)**; rechazos: 273 mención-sin-detección, 86 solo-serología, ~190 números/contexto |
 | Leakage audit v2 | 720 pares únicos, **0% leakage 2020+** (22 pares limpios); 1 par pre-2020 filtrado — `leakage_audit.md` |
 | Costo/edge | **$0.0014** (ledger JSONL por llamada — `agent_calls.jsonl`) |
 | Fail-closed | `dist_frame` rechaza <2 ejes con cobertura; test `test_dist_frame.py` |
