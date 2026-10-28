@@ -232,7 +232,12 @@ async function load() {
           ` · precision ${(m.litmine.precision_raw_audit*100).toFixed(0)}%` +
           ` → ${(m.litmine.precision_judge_verified*100).toFixed(0)}%` +
           ` after judge` : "") +
-        `</span>` : "");
+        `</span>` : "") +
+      (m.supply_chain ? `<br><span class="sub">supply chain: ` +
+        `${(m.supply_chain.egg_layer_birds_affected/1e6).toFixed(0)}M` +
+        ` egg-layer birds lost (${m.supply_chain.egg_layer_events} events)` +
+        ` · ${m.supply_chain.dairy_herd_events} dairy herds in ` +
+        `${m.supply_chain.dairy_states} states (APHIS)</span>` : "");
   } catch(e) { document.getElementById("mxlist").textContent =
     "metrics unavailable"; }
 
