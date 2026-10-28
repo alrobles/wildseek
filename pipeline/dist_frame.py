@@ -218,6 +218,17 @@ def build(base, out=None):
         assert not (frame.min_d_phy_pos == 0).any(), \
             "min_d_phy_pos == 0 — self-distance leaked"
 
+    # ---- fail-closed: refuse to ship a frame built on missing axes
+    n_axes = sum(int(frame[c].sum() > 0)
+                 for c in ("has_env", "has_geo", "has_phy"))
+    cov = frame[["has_env", "has_geo", "has_phy"]].mean().min()
+    if n_axes < 2:
+        sys.exit(f"[dist_frame] REFUSING: only {n_axes} distance axes "
+                 f"have coverage — check inputs, would train on NaN")
+    if cov < 0.5:
+        print(f"[dist_frame] WARNING: weakest axis covers only "
+              f"{100*cov:.0f}% of species")
+
     out = Path(out) if out else base / "dist_frame.parquet"
     out.parent.mkdir(parents=True, exist_ok=True)
     frame.to_parquet(out, index=False)

@@ -34,7 +34,7 @@ def judge(client, model, e):
                     "rel": e.get("relation"),
                     "span": str(e.get("evidence_span", ""))[:300]})
     for _ in range(2):
-        r = client.chat(model=model, temperature=0, max_tokens=200,
+        r = client.chat(model=model, temperature=0, max_tokens=800,
                         messages=[{"role": "system", "content": SYS},
                                   {"role": "user", "content": q}])
         m = re.search(r"\{[^{}]*\}", r["content"] or "")

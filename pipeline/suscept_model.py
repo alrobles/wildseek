@@ -232,6 +232,9 @@ def main():
         "p05": p05,
         "p95": p95,
         "phy_source": df["phy_source"],
+        # how many model features were missing -> median-imputed for
+        # this species (trace for the fail-closed / craft screen)
+        "n_imputed": X[xcols].isna().sum(axis=1).values,
     }).sort_values("p_host", ascending=False).reset_index(drop=True)
 
     out_path = a.out or os.path.join(os.path.dirname(a.input),
