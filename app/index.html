@@ -49,6 +49,16 @@
     <div class="stat" id="brief">loading…</div>
   </div>
 
+  <div class="card">
+    <h3>Model cascade</h3>
+    <div class="stat" id="mxlist">loading…</div>
+  </div>
+
+  <div class="card" id="wcicard">
+    <h3>We called it <span class="badge">dated prediction</span></h3>
+    <div class="stat" id="wcilist">loading…</div>
+  </div>
+
   <h2>Watershed watchlist</h2>
   <div id="wslist" class="stat">loading…</div>
 
@@ -185,6 +195,39 @@ async function load() {
       "\n\n" + (b.methods_note ?? "");
   } catch(e) { document.getElementById("brief").textContent =
     "briefing unavailable"; }
+
+  // --- model cascade + metrics ---------------------------------------
+  try {
+    const m = await fetch("/metrics").then(r=>r.json());
+    const mc = m.model_cascade || {};
+    document.getElementById("mxlist").innerHTML =
+      Object.entries(mc).map(([k,v]) =>
+        `<span class="badge">${esc(k)}</span> ${esc(v.role)}` +
+        (v.calls!=null ? ` · ${v.calls} calls` : "") +
+        (v.cost_usd!=null ? ` · $${v.cost_usd.toFixed(2)}` : "")
+      ).join("<br>") +
+      (m.model ? `<br><span class="sub">CV ROC-AUC ` +
+        `${m.model.roc_auc}±${m.model.roc_sd} · PR ${m.model.pr_auc} · ` +
+        `${m.model.positives}/${m.model.species} labeled</span>` : "") +
+      (m.litmine ? `<br><span class="sub">litmine: ${m.litmine.edges}` +
+        ` edges · ${m.litmine.papers} papers · $${m.litmine.cost_usd}` +
+        ` total</span>` : "");
+  } catch(e) { document.getElementById("mxlist").textContent =
+    "metrics unavailable"; }
+
+  // --- we-called-it card ---------------------------------------------
+  try {
+    const w = await fetch("/we-called-it").then(r=>r.json());
+    const conf = w.predictions.filter(p=>p.status==="confirmed").length;
+    document.getElementById("wcilist").innerHTML =
+      `predicted <b>${esc(w.predicted_on)}</b> — top unlabeled species ` +
+      `by P(host). confirmed by a post-freeze PMID: <b>${conf}</b><br>` +
+      w.predictions.map(p =>
+        `${esc(p.species)} · ${p.p_host.toFixed(2)} ` +
+        `<span class="sub">${p.status==="confirmed" ? "✓ confirmed" :
+          "awaiting"}</span>`).join("<br>");
+  } catch(e) { document.getElementById("wcilist").textContent =
+    "predictions not frozen"; }
 
   // --- species drill-down -------------------------------------------
   const sel = document.getElementById("spSel");

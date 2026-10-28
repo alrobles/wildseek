@@ -119,6 +119,25 @@ def explain(kind: str, ident: str) -> JSONResponse:
     return JSONResponse(do_explain(kind, ident, data_dir=DATA))
 
 
+@app.get("/metrics")
+def metrics() -> JSONResponse:
+    """Baked run metrics: CV AUC, edge counts, model-cascade cost."""
+    f = DATA / "metrics.json"
+    if not f.exists():
+        raise HTTPException(503, "metrics not exported yet")
+    return JSONResponse(json.loads(f.read_text()))
+
+
+@app.get("/we-called-it")
+def we_called_it() -> JSONResponse:
+    """Frozen prospective predictions: top unlabeled species by p_host,
+    dated; confirmed when a post-freeze PMID names the species."""
+    baked = DATA / "we_called_it.json"
+    if not baked.exists():
+        raise HTTPException(503, "predictions not frozen yet")
+    return JSONResponse(json.loads(baked.read_text()))
+
+
 @app.get("/briefing")
 def briefing() -> JSONResponse:
     """System-2 nightly digest via muse-wonder (see agent/briefing.py)."""

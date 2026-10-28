@@ -28,7 +28,8 @@ def main(src: str, dst: str) -> None:
     d.mkdir(parents=True, exist_ok=True)
 
     for name in ("fit_catalog.csv", "risk_watershed.parquet",
-                 "decisions_all.jsonl", "decisions_delta.csv"):
+                 "decisions_all.jsonl", "decisions_delta.csv",
+                 "we_called_it.json", "metrics.json"):
         p = Path(src) / name
         if p.exists():
             (d / name).write_bytes(p.read_bytes())
