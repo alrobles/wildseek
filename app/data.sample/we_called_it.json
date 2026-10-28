@@ -1,0 +1,157 @@
+{
+ "predicted_on": "2026-10-28",
+ "model": "xplus susceptibility (phy+env+geo)",
+ "note": "unlabeled species ranked by p_host; confirmed when a literature edge published after predicted_on names the species as host",
+ "predictions": [
+  {
+   "specieskey": 8214667,
+   "species": "Anas crecca",
+   "p_host": 0.422,
+   "ci": [
+    0.046,
+    0.996
+   ],
+   "status": "awaiting-confirmation"
+  },
+  {
+   "specieskey": 2434566,
+   "species": "Urocyon cinereoargenteus",
+   "p_host": 0.414,
+   "ci": [
+    0.019,
+    0.998
+   ],
+   "status": "awaiting-confirmation"
+  },
+  {
+   "specieskey": 2484183,
+   "species": "Euphagus cyanocephalus",
+   "p_host": 0.379,
+   "ci": [
+    0.025,
+    0.974
+   ],
+   "status": "awaiting-confirmation"
+  },
+  {
+   "specieskey": 2480320,
+   "species": "Charadrius vociferus",
+   "p_host": 0.363,
+   "ci": [
+    0.021,
+    0.967
+   ],
+   "status": "awaiting-confirmation"
+  },
+  {
+   "specieskey": 2498375,
+   "species": "Mergus serrator",
+   "p_host": 0.347,
+   "ci": [
+    0.02,
+    0.995
+   ],
+   "status": "awaiting-confirmation"
+  },
+  {
+   "specieskey": 2484597,
+   "species": "Regulus calendula",
+   "p_host": 0.335,
+   "ci": [
+    0.01,
+    0.92
+   ],
+   "status": "awaiting-confirmation"
+  },
+  {
+   "specieskey": 2482032,
+   "species": "Aechmophorus clarkii",
+   "p_host": 0.33,
+   "ci": [
+    0.013,
+    0.975
+   ],
+   "status": "awaiting-confirmation"
+  },
+  {
+   "specieskey": 5231140,
+   "species": "Zonotrichia albicollis",
+   "p_host": 0.329,
+   "ci": [
+    0.018,
+    0.983
+   ],
+   "status": "awaiting-confirmation"
+  },
+  {
+   "specieskey": 5219683,
+   "species": "Sciurus niger",
+   "p_host": 0.312,
+   "ci": [
+    0.012,
+    0.99
+   ],
+   "status": "awaiting-confirmation"
+  },
+  {
+   "specieskey": 2481174,
+   "species": "Larus fuscus",
+   "p_host": 0.309,
+   "ci": [
+    0.008,
+    0.988
+   ],
+   "status": "awaiting-confirmation"
+  },
+  {
+   "specieskey": 2484184,
+   "species": "Euphagus carolinus",
+   "p_host": 0.309,
+   "ci": [
+    0.008,
+    0.978
+   ],
+   "status": "awaiting-confirmation"
+  },
+  {
+   "specieskey": 2489169,
+   "species": "Petrochelidon pyrrhonota",
+   "p_host": 0.307,
+   "ci": [
+    0.022,
+    0.947
+   ],
+   "status": "awaiting-confirmation"
+  },
+  {
+   "specieskey": 8000602,
+   "species": "Mareca penelope",
+   "p_host": 0.303,
+   "ci": [
+    0.01,
+    0.968
+   ],
+   "status": "awaiting-confirmation"
+  },
+  {
+   "specieskey": 2481957,
+   "species": "Gavia adamsii",
+   "p_host": 0.299,
+   "ci": [
+    0.007,
+    0.975
+   ],
+   "status": "awaiting-confirmation"
+  },
+  {
+   "specieskey": 2439838,
+   "species": "Castor canadensis",
+   "p_host": 0.298,
+   "ci": [
+    0.013,
+    0.951
+   ],
+   "status": "awaiting-confirmation"
+  }
+ ]
+}

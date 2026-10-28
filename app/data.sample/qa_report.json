@@ -1,0 +1,80 @@
+{
+ "pass": false,
+ "verdict": {
+  "codigo": false,
+  "seguridad": false,
+  "ux": false,
+  "brain": false
+ },
+ "quorum": "0/4",
+ "reviews": {
+  "codigo": [
+   {
+    "name": "n_species>=1000",
+    "ok": true,
+    "value": 1147
+   },
+   {
+    "name": "n_detections>=8000",
+    "ok": true,
+    "value": 9479
+   },
+   {
+    "name": "susceptibility.parquet",
+    "ok": false
+   },
+   {
+    "name": "detections.geojson",
+    "ok": true,
+    "value": 9479
+   }
+  ],
+  "seguridad": [
+   {
+    "name": "no detection collapse (>5% drop fails)",
+    "ok": true,
+    "value": "-2.2%"
+   },
+   {
+    "name": "risk.png non-trivial",
+    "ok": true,
+    "value": 372100
+   },
+   {
+    "name": "reservoir_sum.png non-trivial",
+    "ok": false,
+    "value": 0
+   }
+  ],
+  "ux": [
+   {
+    "name": "meta.json ui keys",
+    "ok": false,
+    "value": "missing: ['reservoir_sum_png']"
+   },
+   {
+    "name": "risk.png exists",
+    "ok": true
+   },
+   {
+    "name": "reservoir_sum.png exists",
+    "ok": false
+   },
+   {
+    "name": "reservoir_max.png exists",
+    "ok": false
+   },
+   {
+    "name": "reservoir_prob.png exists",
+    "ok": false
+   }
+  ],
+  "brain": [
+   {
+    "name": "brain review",
+    "ok": false,
+    "value": "no manifest"
+   }
+  ]
+ }
+}
