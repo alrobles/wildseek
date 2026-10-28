@@ -59,6 +59,17 @@ Two parallel views of the same score: which wild vertebrates are
 climatically suitable hosts where, and which watersheds sit inside
 the risk zone.
 
+## Run the demo
+
+```bash
+cp -r app/data.sample app/data   # pre-seeded minimal artifacts (3.6 MB)
+cd serve && docker compose up    # api + frontend on :8080
+```
+
+`app/data.sample` ships a top-100 slice of every layer (no `suit_*.png`
+rasters — those are cluster outputs; regenerate with
+`pipeline/seed_demo.py` from a full `app/data` export).
+
 ## Hackathon delta
 
 - Meta Model API throughout: muse-spark-1.3 for typed triage and
