@@ -105,6 +105,32 @@ Corpus: `/kuhpc/work/kbs/a474r867/pubmed` — baseline completo
 década + `index/pubmed_fts.db` (FTS sobre todo PubMed). La cola de
 papers se construye por query FTS in-cluster, no por API externa.
 
+## litmine-monitor — vigilancia continua (el diferenciador)
+
+Las DBs competidoras son snapshots: ZOVER se curó una vez, VIRION
+actualiza semanal desde GenBank pero su curación experta es anual.
+Un extractor zero-shot corriendo **diario** detecta "nuevo hospedero
+reportado" el día que sale el paper — alerta temprana que ninguna
+DB curada puede ofrecer. Mismo loop OODA que `nightly.py`:
+
+```
+delta:   PubMed ESearch mindate/maxdate (ultimas 24-48h) o los
+         updatefiles NCBI del dump local -> PMIDs nuevos del scope
+S0:      PU score / query taxa -> solo relevantes pagan tokens
+extract: pubtator3 annotate -> S1 relacion (lo que ya corre)
+dedupe:  (pmid, parasite_taxid, host_taxid, relation) vs store
+store:   interactions.parquet particionado por run_id=fecha
+brief:   reporte diario — N papers, M aristas nuevas, taxa nuevos
+         (misma superficie BRIEFING que nightly WildSeek)
+feed:    aristas nuevas -> species_labels WildSeek -> el siguiente
+         fit ya incorpora la evidencia
+```
+
+Costo: ~50-200 papers/día en el scope zoonosis/parasitología ->
+$0.00-0.05/día en fireworks. El grafo se vuelve **vivo** — eso es lo
+que se vende: "literature surveillance as a service" para nuestro
+propio modelo y como artefacto publicable por separado.
+
 ## La integración que vale el proyecto
 
 `interactions.parquet` es un **EvidenceFeed más de WildSeek**:
