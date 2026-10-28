@@ -76,8 +76,8 @@ BRAIN    ledger por scope: papers, pares nuevos, precision en
 | PubTator3 API | NER linkeado (TaxID/MESH) — generalidad del extractor |
 | ZOVER (mgc.ac.cn) | aristas curadas virus/huésped/vector zoonótico — semilla del grafo + eval. Export ~5.9k muestras (bat/rodent/mosquito/tick.xlsx): Host species + geo + tejido + BioSample → lado hospedero de la arista; el virus se resuelve vía BioSample/BioProject (o implícito por export). **Nota QA: los nombres de archivo están rotados respecto a su contenido** (bat.xlsx=roedores, rodent.xlsx=mosquitos, mosquito.xlsx=garrapatas, tick.xlsx=murciélagos) — nombrar por contenido al ingerir, nunca por filename |
 | GMPD | aristas mamífero-parásito — semilla del grafo |
-| abstractsHostParasites repo | corpus curado: zover (380), gmpd (1.8MB), zover_gmpd/lacs/df_parasites/parasiteAbstracts **etiquetados**, df_abstracts_random (negativos para calibración) |
-| pu_learning_model (rds) | filtro S0 de relevancia reutilizable |
+| abstractsHostParasites repo (data-raw/) | corpus curado del proyecto abandonado — **salvaje**: etiquetados `df_parasites` (1.9k), `zover_gmpd` (2.2k), `lacs` (6.5k), `db_abstracts`, `df_abstracts_sample`, `df_abstracts_random` (negativos = oro de calibración); corpus por DB `zover_doi` (380), `gmpd_doi` (1.8MB), `parasiteAbstracts` (2.1MB); **`df_abstracts.csv` (9.7MB) lleva columna `score` = output PU ya computado** — el filtro S0 sobre el corpus grande ya existe, no hay que cargar el .rds |
+| pu_learning_model (rds, 57MB) | alternativa al score: re-aplicar S0 a corpus nuevo |
 
 ## La integración que vale el proyecto
 
