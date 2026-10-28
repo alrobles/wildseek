@@ -54,14 +54,40 @@ Three layers, all computed during the event window:
 - `muse-wonder-1.0` — `/briefing` narrative over the night's
   artifacts (baked to JSON, demo runs keyless).
 - `muse-spark-1.2-contributor` — bulk OpenAlex literature extraction.
-- `muse-glimmer` (self-hosted, KU HPC) — free offload path.
+- `muse-glimmer` (self-hosted, KU HPC) — free offload path; also the
+  litmine JUDGE (see below).
+
+## litmine — the literature edge factory
+
+Second product: a live loop mining parasite↔host edges from
+full-text papers, with per-edge provenance (PMID + evidence span):
+
+- **Capa 0/1**: PMC Open-Access full text → chunked passages →
+  `muse-spark-open` (Fireworks) YES/NO triage — keeps 23% of chunks,
+  ~74% token savings ($1.93 per 3k-chunk corpus).
+- **Capa 2**: typed edge extraction (parasite, host, relation,
+  evidence_span, geo/date/method) at **$0.0014 per edge**.
+- **Capa 3 (JUDGE)**: self-hosted `muse-glimmer` re-verifies every
+  edge against its span — rejects serology-only and species-without-
+  detection mentions (42% pass on the ZOVER abstracts run). On a
+  30-edge audit, raw precision 73% → **100% on judge-verified edges**.
+- **Numbers**: 1,451 mined edges / 1,059 unique pairs / 129 papers
+  (`interactions.parquet`). On the held-out Ebola/Lassa gold,
+  full-text pair-recall **56% vs 16% abstract-only** (3.4×).
+- **Prospective validation**: `we-called-it` card froze the top-15
+  unlabeled species by p_host on **2026-10-28**; a post-freeze PMID
+  naming one as host flips it to confirmed — statuses shown live.
+- Endpoints: `/litmine` (ticker), `/metrics`, `/we-called-it`,
+  `/decisions` (executable switch_to delta).
 
 ## Nightly loop
 
 `pipeline/nightly.py` (cron 03:15): fetch APHIS → spec detects
-whether refit is warranted → Slurm build on KU HPC (submit +
-`sacct` polling, no blind timeout) → QA approver (hard gates +
-3/4 reviewer quorum) → rsync to production → re-baked briefing.
+whether refit is warranted (run spec carries an explicit
+`criticality`: routine ships direct, refit flags a human) → Slurm
+build on KU HPC (submit + `sacct` polling, no blind timeout) → QA
+approver (hard gates + 3/4 reviewer quorum + **cost veto** on the
+call ledger) → rsync to production → re-baked briefing.
 Optional self-heal (`WILDSEEK_SELFHEAL=1`) lets a Muse agent
 attempt bounded repairs; off by default.
 
@@ -83,8 +109,9 @@ attempt bounded repairs; off by default.
   exists in refit path for queued species.
 - 179 species remain on taxonomic-proxy phylo distance (2 hybrids,
   taxa absent from the trees, one ambiguous GBIF entity).
-- BirdTree↔v6 distance scales differ; both are used as
-  within-class distances and a per-class normalization is planned.
+- BirdTree↔v6 distance scales differ; handled by per-source
+  normalization plus an `is_patristic_real` indicator feature
+  (dist_frame fail-closed if fewer than two distance axes cover).
 - ~13% of aves occurrence cells fall on era5land water pixels and
   are dropped from env extraction.
 - Suitability is climate-only; biotic/dispersal axes are future work
