@@ -39,6 +39,18 @@ def find_doi(text):
     return m.group(0).rstrip(".,;)") if m else ""
 
 
+def window_chunks(text, size=4000, overlap=200):
+    """Split oversized section text into ~size-char windows."""
+    text = text.strip()
+    if len(text) <= size:
+        return [(0, text)]
+    out, i = [], 0
+    while i < len(text):
+        out.append((i, text[i:i + size]))
+        i += size - overlap
+    return out
+
+
 def split_sections(text):
     """Yield (section_type, chunk_text) — header-driven split."""
     lines = text.splitlines()
@@ -96,10 +108,11 @@ def main():
         for st, chunk in split_sections(text):
             if st not in KEEP or len(chunk.strip()) < 40:
                 continue
-            rows.append({"pmid": pmid, "pmcid": "PDF:" + os.path.basename(pdf),
-                         "section_type": st, "pass_type": "pdf",
-                         "text": chunk.strip(),
-                         "offset": 0})
+            for off, win in window_chunks(chunk):
+                rows.append({"pmid": pmid,
+                             "pmcid": "PDF:" + os.path.basename(pdf),
+                             "section_type": st, "pass_type": "pdf",
+                             "text": win.strip(), "offset": off})
     if rows:
         df = pd.DataFrame(rows)
         if os.path.exists(args.out):
