@@ -29,6 +29,7 @@ def norm_name(s: str) -> str:
     """'Anas platyrhynchos Linnaeus, 1758' -> 'anas platyrhynchos';
     common names pass through lowercase."""
     s = unicodedata.normalize("NFKD", str(s)).strip()
+    s = s.replace("\ufeff", "")
     s = re.sub(r"\s+", " ", s)
     m = BINOMIAL.match(s)
     return f"{m.group(1)} {m.group(2)}".lower() if m else s.lower()

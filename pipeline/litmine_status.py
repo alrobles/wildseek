@@ -25,12 +25,14 @@ def main():
     except FileNotFoundError:
         card["papers"] = 0
 
-    try:
-        t = pd.read_parquet(f"{LIT}/triage.parquet")
-        card["chunks"] = len(t)
-        card["yes_chunks"] = int(t.relevant.sum())
-    except FileNotFoundError:
-        card["chunks"] = card["yes_chunks"] = 0
+    card["chunks"] = card["yes_chunks"] = 0
+    for tf in ("triage.parquet", "triage_zover.parquet"):
+        p = f"{LIT}/{tf}"
+        if not os.path.exists(p):
+            continue
+        t = pd.read_parquet(p)
+        card["chunks"] += len(t)
+        card["yes_chunks"] += int(t.relevant.sum())
 
     edges = []
     for f in ("edges_fulltext.csv", "edges_zover.csv"):
@@ -43,14 +45,22 @@ def main():
     if edges:
         e = pd.concat(edges, ignore_index=True)
         card["edges"] = len(e)
+        if "verified" in e.columns:
+            v = e.verified.fillna(False).astype(str).str.lower()
+            card["verified"] = int((v == "true").sum())
+        else:
+            card["verified"] = 0
+        named = e[e.parasite.fillna("").astype(str).str.len() > 0]
+        show = named if len(named) >= 12 else e
         keep = ["pmid", "parasite", "host", "parasite_taxid",
                 "host_taxid", "relation", "evidence_span",
-                "section_type"]
+                "section_type", "verified"]
         cols = [c for c in keep if c in e.columns]
-        card["recent"] = (e[cols].tail(12)
-                          .fillna("").to_dict("records"))[::-1]
+        recent = show[cols].tail(12).astype(object)
+        card["recent"] = (recent.where(recent.notna(), "")
+                          .to_dict("records"))[::-1]
     else:
-        card["edges"] = 0
+        card["edges"] = card["verified"] = 0
         card["recent"] = []
 
     os.makedirs(SERVE, exist_ok=True)
