@@ -1,0 +1,46 @@
+{
+ "checks": {
+  "S1_coldopen_pub": 0,
+  "S2_litmine_pub": 0,
+  "S3_models_grep": 0.5,
+  "S4_disclaimer": 1,
+  "S5_provenance": 1,
+  "S6_live": 1,
+  "I1_called": 0,
+  "I2_confirm": 0,
+  "I3_agro": 0.5,
+  "I4_eggs": 0.5,
+  "I5_benef": 1,
+  "T1_cascade": 0,
+  "T2_switch": 0.5,
+  "T3_wonder": 1,
+  "T4_glimmer": 0.5,
+  "T5_ledger": 0,
+  "D1_live": 1,
+  "D2_video": 0.5,
+  "D3_ticker": 0,
+  "D4_cost": 0,
+  "D5_backup": 0,
+  "H1_craft": 0.5,
+  "H2_leak": 0,
+  "H3_prec": 0,
+  "H4_fail": 0.5,
+  "H5_phy": 0
+ },
+ "log": [
+  {
+   "ts": "2026-10-28T06:56:11.477780+00:00",
+   "set": [
+    "score",
+    null
+   ],
+   "scores": {
+    "impact": 3.25,
+    "tooling": 3.5,
+    "demo": 3.75,
+    "depth": 2.25
+   },
+   "p1": 0.3395699999999999
+  }
+ ]
+}
