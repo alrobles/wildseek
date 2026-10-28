@@ -54,8 +54,14 @@ BUILDER  por paper: abstract + anotaciones -> LLM tipado, prompt
          agnóstico de taxón:
          {parasite_taxid, host_taxid,
           relation: parasite_of|host_of|vector_of|reservoir_of|
-                    intermediate_host_of|dead_end,
-          evidence_span, confidence}
+                    intermediate_host_of|dead_end|no_detection,
+          evidence_span, confidence,
+          geo?, date?, method?, tissue?}
+         — Lindsley et al. 2026 (PLOS NTD, VIRION eval): las DBs
+         existentes PIERDEN resultados negativos y resolución
+         espacio-temporal — nuestro schema los captura
+         (no_detection es arista de primera clase; geo/date/
+         method/tissue del span, como los samples ZOVER)
          — el LLM no hace NER, hace RELACIÓN sobre entidades ya
          anotadas: más barato y auditable (el span está anclado)
 JUDGE    S1 re-lee evidencia contra el span (self-consistency);
@@ -75,6 +81,7 @@ BRAIN    ledger por scope: papers, pares nuevos, precision en
 |---|---|
 | PubTator3 API | NER linkeado (TaxID/MESH) — generalidad del extractor |
 | ZOVER (mgc.ac.cn) | aristas curadas virus/huésped/vector zoonótico — semilla del grafo + eval. Export ~5.9k muestras (bat/rodent/mosquito/tick.xlsx): Host species + geo + tejido + BioSample → lado hospedero de la arista; el virus se resuelve vía BioSample/BioProject (o implícito por export). **Nota QA: los nombres de archivo están rotados respecto a su contenido** (bat.xlsx=roedores, rodent.xlsx=mosquitos, mosquito.xlsx=garrapatas, tick.xlsx=murciélagos) — nombrar por contenido al ingerir, nunca por filename |
+| **VIRION** (viralemergence/virion) | la mayor DB abierta hospedero↔virus: compila CLOVER (GMPD2+HP3+Shaw+EID2) + extracción diaria GenBank — **la semilla principal del grafo** (superset de las demás) |
 | GMPD | aristas mamífero-parásito — semilla del grafo |
 | abstractsHostParasites repo (data-raw/) | corpus curado del proyecto abandonado — **salvaje**: etiquetados `df_parasites` (1.9k), `zover_gmpd` (2.2k), `lacs` (6.5k), `db_abstracts`, `df_abstracts_sample`, `df_abstracts_random` (negativos = oro de calibración); corpus por DB `zover_doi` (380), `gmpd_doi` (1.8MB), `parasiteAbstracts` (2.1MB); **`df_abstracts.csv` (9.7MB) lleva columna `score` = output PU ya computado** — el filtro S0 sobre el corpus grande ya existe, no hay que cargar el .rds |
 | pu_learning_model (rds, 57MB) | alternativa al score: re-aplicar S0 a corpus nuevo |
