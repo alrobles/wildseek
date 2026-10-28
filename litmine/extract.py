@@ -26,6 +26,11 @@ from meta_client import MetaClient  # noqa: E402
 
 PUBTATOR = ("https://www.ncbi.nlm.nih.gov/research/pubtator3-api/"
             "publications/export/pubtator?pmids=")
+# NCBI api_key (env NCBI_API_KEY, source ~/env/ncbi-key) raises the
+# rate limit 3->10 req/s — required for sweeps, harmless otherwise.
+_API_KEY = os.environ.get("NCBI_API_KEY", "")
+if _API_KEY:
+    PUBTATOR += "&api_key=" + _API_KEY
 
 RELATIONS = ("parasite_of", "host_of", "vector_of", "reservoir_of",
              "intermediate_host_of", "dead_end", "no_detection")
