@@ -8,13 +8,13 @@
   "S6_live": 1,
   "I1_called": 1.0,
   "I2_confirm": 0,
-  "I3_agro": 0.5,
+  "I3_agro": 1.0,
   "I4_eggs": 0.5,
   "I5_benef": 1,
   "T1_cascade": 1.0,
   "T2_switch": 0.5,
   "T3_wonder": 1,
-  "T4_glimmer": 0.5,
+  "T4_glimmer": 1.0,
   "T5_ledger": 1.0,
   "D1_live": 1,
   "D2_video": 0.5,
@@ -23,7 +23,7 @@
   "D5_backup": 0,
   "H1_craft": 0.5,
   "H2_leak": 1.0,
-  "H3_prec": 0,
+  "H3_prec": 0.5,
   "H4_fail": 0.5,
   "H5_phy": 1.0
  },
@@ -277,6 +277,48 @@
     "tooling": 8.0,
     "demo": 7.25,
     "depth": 6.25
+   },
+   "p1": 0.99
+  },
+  {
+   "ts": "2026-10-28T09:06:50.377560+00:00",
+   "set": [
+    "H3_prec",
+    0.5
+   ],
+   "scores": {
+    "impact": 6.25,
+    "tooling": 8.0,
+    "demo": 7.25,
+    "depth": 7.0
+   },
+   "p1": 0.99
+  },
+  {
+   "ts": "2026-10-28T09:09:01.166213+00:00",
+   "set": [
+    "T4_glimmer",
+    1.0
+   ],
+   "scores": {
+    "impact": 6.25,
+    "tooling": 9.0,
+    "demo": 7.25,
+    "depth": 7.0
+   },
+   "p1": 0.99
+  },
+  {
+   "ts": "2026-10-28T09:10:55.692389+00:00",
+   "set": [
+    "I3_agro",
+    1.0
+   ],
+   "scores": {
+    "impact": 7.25,
+    "tooling": 9.0,
+    "demo": 7.25,
+    "depth": 7.0
    },
    "p1": 0.99
   }

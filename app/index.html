@@ -79,7 +79,11 @@
       <option value="max">strongest host</option>
     </select></div>
   <div class="layer"><label><input type="checkbox" id="ckCty">
-    poultry exposure by county</label></div>
+    exposure by county</label>
+    <select id="ctyMode" style="margin-left:16px;font-size:11px">
+      <option value="exposure">poultry (county)</option>
+      <option value="dairy_exposure">dairy herds (state)</option>
+    </select></div>
   <div class="layer"><label><input type="checkbox" id="ckDet">
     wild-bird HPAI detections</label>
     <input type="range" id="detYear" min="2022" max="2026" value="2026" step="1">
@@ -296,6 +300,15 @@ async function load() {
   vis("riskFill","ckRisk"); vis("ctyFill","ckCty"); vis("rsv","ckRsv");
   vis("detPt","ckDet");  vis("flockPt","ckFlock"); vis("flyLine","ckFly");
 
+  // poultry vs dairy exposure field toggle
+  const ctyPaint = v => ["interpolate",["linear"],["get",v],
+    0,"#fee8c8", 1,"#e34a33"];
+  document.getElementById("ctyMode").onchange = e => {
+    if (map.getLayer("ctyFill"))
+      map.setPaintProperty("ctyFill", "fill-color",
+        ctyPaint(e.target.value));
+  };
+
   // detection time filter
   document.getElementById("detYear").oninput = e => {
     const y = e.target.value;
@@ -330,10 +343,13 @@ async function load() {
       document.getElementById("ccTitle").textContent =
         `${p.name} Co., ${p.state}`;
       document.getElementById("ccSub").textContent =
-        `county exposure ${p.exposure}`;
+        `poultry exposure ${p.exposure} · dairy exposure ` +
+        `${p.dairy_exposure ?? 0}`;
       document.getElementById("ccBody").textContent =
         `mean risk ${p.mean_risk} · ${p.events} flock confirmations · ` +
-        `${Number(p.birds_affected).toLocaleString()} birds affected`;
+        `${Number(p.birds_affected).toLocaleString()} birds affected · ` +
+        `${p.dairy_events ?? 0} dairy events ` +
+        `(${Number(p.dairy_herds ?? 0).toLocaleString()} herds, state-level)`;
       return;
     }
     card.style.display = "none";

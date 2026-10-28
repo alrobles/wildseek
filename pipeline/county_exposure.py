@@ -5,6 +5,7 @@ Runs under SLURM (reads the 1/120-deg risk grid on beegfs).
 """
 import json
 import os
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
@@ -59,6 +60,28 @@ def main():
     cty["birds_affected"] = cty["birds_affected"].fillna(0)
     # exposure = mean risk x log severity of past flock impact
     cty["exposure"] = cty["mean_risk"] * np.log1p(cty["birds_affected"])
+
+    # dairy cattle HPAI events are state-level (no county in APHIS
+    # livestock table) — a separate exposure so poultry and dairy
+    # supply chains stay distinguishable
+    lv = Path(f"{OUT}/aphis_livestock.parquet")
+    if lv.exists():
+        lvd = pd.read_parquet(lv)
+        lag = (lvd.groupby("state_fips")
+                 .agg(dairy_events=("total", "size"),
+                      dairy_herds=("total", "sum"))
+                 .reset_index())
+        lag["state_fips"] = (lag["state_fips"].astype("Int64")
+                             .astype(str).str.zfill(2))
+        cty = cty.merge(lag, on="state_fips", how="left")
+        cty["dairy_events"] = cty["dairy_events"].fillna(0).astype(int)
+        cty["dairy_herds"] = cty["dairy_herds"].fillna(0)
+        cty["dairy_exposure"] = (cty["mean_risk"]
+                                 * np.log1p(cty["dairy_herds"]))
+    else:
+        cty["dairy_events"] = 0
+        cty["dairy_herds"] = 0.0
+        cty["dairy_exposure"] = 0.0
     cty.to_parquet(f"{OUT}/county_exposure.parquet", index=False)
     print(cty.nlargest(10, "exposure")[
         ["name", "state", "mean_risk", "birds_affected", "exposure"]]
@@ -79,7 +102,11 @@ def main():
                           "mean_risk": round(float(r["mean_risk"]), 5),
                           "events": int(r["events"]),
                           "birds_affected": float(r["birds_affected"]),
-                          "exposure": round(float(r["exposure"]), 5)},
+                          "exposure": round(float(r["exposure"]), 5),
+                          "dairy_events": int(r["dairy_events"]),
+                          "dairy_herds": float(r["dairy_herds"]),
+                          "dairy_exposure":
+                              round(float(r["dairy_exposure"]), 5)},
                       "geometry": f["geometry"]})
     with open(f"{OUT}/county_exposure.geojson", "w") as fh:
         json.dump({"type": "FeatureCollection", "features": feats}, fh)
