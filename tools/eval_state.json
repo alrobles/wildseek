@@ -15,10 +15,10 @@
   "T2_switch": 0.5,
   "T3_wonder": 1,
   "T4_glimmer": 0.5,
-  "T5_ledger": 0,
+  "T5_ledger": 1.0,
   "D1_live": 1,
   "D2_video": 0.5,
-  "D3_ticker": 0,
+  "D3_ticker": 1.0,
   "D4_cost": 0,
   "D5_backup": 0,
   "H1_craft": 0.5,
@@ -192,6 +192,48 @@
     "impact": 6.25,
     "tooling": 6.5,
     "demo": 3.75,
+    "depth": 6.25
+   },
+   "p1": 0.99
+  },
+  {
+   "ts": "2026-10-28T07:04:15.635914+00:00",
+   "set": [
+    "T5_ledger",
+    1.0
+   ],
+   "scores": {
+    "impact": 6.25,
+    "tooling": 8.0,
+    "demo": 3.75,
+    "depth": 6.25
+   },
+   "p1": 0.99
+  },
+  {
+   "ts": "2026-10-28T07:04:19.619107+00:00",
+   "set": [
+    "D3_ticker",
+    1.0
+   ],
+   "scores": {
+    "impact": 6.25,
+    "tooling": 8.0,
+    "demo": 5.75,
+    "depth": 6.25
+   },
+   "p1": 0.99
+  },
+  {
+   "ts": "2026-10-28T07:04:27.794470+00:00",
+   "set": [
+    "score",
+    null
+   ],
+   "scores": {
+    "impact": 6.25,
+    "tooling": 8.0,
+    "demo": 5.75,
     "depth": 6.25
    },
    "p1": 0.99

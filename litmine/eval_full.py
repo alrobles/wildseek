@@ -55,13 +55,15 @@ def main():
     e = pd.read_csv(args.edges)
     g = pd.read_csv(args.gold)
 
-    mined_pmids = set(e.pmid.astype(str))
-    gold_pmids = set(g["PUBMED ID"].astype(str).str.replace(".0", "",
-                                                          regex=False))
+    def _pmid(v):
+        import re as _re
+        return _re.sub(r"\D", "", str(v).lstrip("\ufeff"))
+
+    mined_pmids = set(e.pmid.map(_pmid))
+    gold_ids = g["PUBMED ID"].map(_pmid)
+    gold_pmids = set(gold_ids)
     cov = mined_pmids & gold_pmids
-    gold_in = g[g["PUBMED ID"].astype(str).str.replace(".0", "",
-                                                      regex=False)
-                .isin(cov)]
+    gold_in = g[gold_ids.isin(cov)]
     pairs = set(zip(gold_in["Virus"].map(norm_name),
                     gold_in["Host"].map(norm_name)))
 
