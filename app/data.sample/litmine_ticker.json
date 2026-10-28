@@ -1,0 +1,143 @@
+{
+ "updated": "2026-10-28 03:58",
+ "pipeline": "papers -> chunks -> YES triage -> typed edges -> rank",
+ "papers": 348,
+ "chunks": 792,
+ "yes_chunks": 303,
+ "edges": 957,
+ "verified": 100,
+ "recent": [
+  {
+   "pmid": 2229429,
+   "parasite": "Ebola virus",
+   "host": "African green monkey",
+   "parasite_taxid": "",
+   "host_taxid": "",
+   "relation": "parasite_of",
+   "evidence_span": "MA-104 cells (an African green monkey kidney cell line; Whittaker Bioproducts",
+   "section_type": "TITLE",
+   "verified": ""
+  },
+  {
+   "pmid": 2229429,
+   "parasite": "Ebola virus",
+   "host": "MA-104 cells",
+   "parasite_taxid": "",
+   "host_taxid": "",
+   "relation": "parasite_of",
+   "evidence_span": "MA-104 cells. These had been infected by inoculation with serum samples",
+   "section_type": "TITLE",
+   "verified": ""
+  },
+  {
+   "pmid": 2229429,
+   "parasite": "Ebola virus",
+   "host": "Macaca fascicularis",
+   "parasite_taxid": "",
+   "host_taxid": "",
+   "relation": "parasite_of",
+   "evidence_span": "epizootic in cynomolgus monkeys (Macaca fascicularis), imported from the Philippines",
+   "section_type": "TITLE",
+   "verified": ""
+  },
+  {
+   "pmid": 2229429,
+   "parasite": "Ebola virus",
+   "host": "cynomolgus monkeys",
+   "parasite_taxid": "",
+   "host_taxid": "",
+   "relation": "parasite_of",
+   "evidence_span": "epizootic in cynomolgus monkeys (Macaca fascicularis), imported from the Philippines",
+   "section_type": "TITLE",
+   "verified": ""
+  },
+  {
+   "pmid": 2229429,
+   "parasite": "filovirus",
+   "host": "cynomolgus monkeys",
+   "parasite_taxid": "",
+   "host_taxid": "",
+   "relation": "parasite_of",
+   "evidence_span": "an epizootic involving a filovirus closely related to Ebola virus in a group of cynomolgus monkeys",
+   "section_type": "TITLE",
+   "verified": ""
+  },
+  {
+   "pmid": 10580275,
+   "parasite": "EBO",
+   "host": "Mus sp.",
+   "parasite_taxid": "",
+   "host_taxid": "",
+   "relation": "parasite_of",
+   "evidence_span": "1 EBO-positive /4 Praomyes sp.1; 1/12 Praomys sp.2; 1/7 Sylvisorex, and 4/40 Mus sp.",
+   "section_type": "TITLE",
+   "verified": ""
+  },
+  {
+   "pmid": 10580275,
+   "parasite": "EBO",
+   "host": "Sylvisorex",
+   "parasite_taxid": "",
+   "host_taxid": "",
+   "relation": "parasite_of",
+   "evidence_span": "1 EBO-positive /4 Praomyes sp.1; 1/12 Praomys sp.2; 1/7 Sylvisorex, and 4/40 Mus sp.",
+   "section_type": "TITLE",
+   "verified": ""
+  },
+  {
+   "pmid": 10580275,
+   "parasite": "EBO",
+   "host": "Praomys sp.1",
+   "parasite_taxid": "",
+   "host_taxid": "",
+   "relation": "parasite_of",
+   "evidence_span": "1 EBO-positive /4 Praomyes sp.1; 1/12 Praomys sp.2; 1/7 Sylvisorex, and 4/40 Mus sp.",
+   "section_type": "TITLE",
+   "verified": ""
+  },
+  {
+   "pmid": 10580275,
+   "parasite": "EBO virus",
+   "host": "Praomys sp2 NC76",
+   "parasite_taxid": "",
+   "host_taxid": "",
+   "relation": "parasite_of",
+   "evidence_span": "this animal tested positive for both glycoprotein and polymerase genes",
+   "section_type": "TITLE",
+   "verified": ""
+  },
+  {
+   "pmid": 10580275,
+   "parasite": "EBO virus",
+   "host": "Praomys sp2",
+   "parasite_taxid": "",
+   "host_taxid": "",
+   "relation": "parasite_of",
+   "evidence_span": "Groups of viral nucleocapsids in spleen cells are indicated by arrows",
+   "section_type": "TITLE",
+   "verified": ""
+  },
+  {
+   "pmid": 10580275,
+   "parasite": "EBO",
+   "host": "S. ollula",
+   "parasite_taxid": "",
+   "host_taxid": "",
+   "relation": "parasite_of",
+   "evidence_span": "the last was a shrew (S. ollula) (table I)",
+   "section_type": "TITLE",
+   "verified": ""
+  },
+  {
+   "pmid": 10580275,
+   "parasite": "EBO",
+   "host": "P. sp.2",
+   "parasite_taxid": "",
+   "host_taxid": "",
+   "relation": "parasite_of",
+   "evidence_span": "Six of the animals were rodents (M. setulosus, Praomys sp.1 and P. sp.2)",
+   "section_type": "TITLE",
+   "verified": ""
+  }
+ ]
+}

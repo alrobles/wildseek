@@ -28,20 +28,43 @@
   "yes": 303,
   "yes_rate": 0.38,
   "tok_savings": 0.56,
-  "edges": 217,
-  "cost_usd": 0.82
+  "edges": 957,
+  "cost_usd": 1.33,
+  "edges_fulltext": 740,
+  "pair_recall_gold": 0.56,
+  "precision_judge": 0.73,
+  "note": "56% pair recall vs 16% abstracts; judge-verified subset 100% precision on 30-edge audit (raw 73%); zover verify 42%",
+  "cost_per_edge_usd": 0.0014,
+  "edges_zover": 217,
+  "verified_zover": "88/212 (42%)",
+  "precision_raw_audit": 0.73,
+  "precision_judge_verified": 1.0,
+  "judge_edge_retention": 0.55
  },
  "model": {
-  "roc_auc": 0.83,
-  "roc_sd": 0.025,
-  "pr_auc": 0.435,
+  "roc_auc": 0.862,
+  "roc_sd": 0.028,
+  "pr_auc": 0.539,
+  "model": "logreg_poly2 [ext]",
+  "alt": "hgbt ext roc 0.856 pr 0.556",
   "species": 1147,
   "positives": 159,
-  "cv": "stratified k-fold x2 repeats"
+  "cv": "stratified 5-fold x20, per-source-normalized phy + is_patristic_real",
+  "winner_note": "ext feats beat base (0.862 vs 0.850); perm importance: geo 0.31 > env 0.16 > phy 0.12"
  },
  "decisions": {
   "n": 173,
   "flag_review": 49
  },
- "predictions_frozen": 15
+ "predictions_frozen": 15,
+ "supply_chain": {
+  "poultry_events": 1109,
+  "poultry_birds_affected": 82017090,
+  "egg_layer_events": 58,
+  "egg_layer_birds_affected": 60109500,
+  "commercial_events": 472,
+  "dairy_herd_events": 1031,
+  "dairy_states": 17,
+  "note": "APHIS confirmations through 2024-02; egg-layers = 73% of birds lost -> egg supply shock"
+ }
 }

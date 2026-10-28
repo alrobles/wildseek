@@ -23,7 +23,7 @@ def main():
 
     # --- always copy (small, required) --------------------------------
     keep = ["meta.json", "metrics.json", "we_called_it.json",
-            "briefing.json", "qa_report.json",
+            "briefing.json", "qa_report.json", "litmine_ticker.json",
             "species_winner.csv",
             "decisions_delta.csv", "decisions_all.jsonl",
             "risk.png", "risk_detect.png"]

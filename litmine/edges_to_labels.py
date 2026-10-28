@@ -54,8 +54,8 @@ def main():
 
     # prospective eval: p_host should rank lit-evidenced hosts high
     ev = sus.merge(lab[["specieskey", "lit_host"]], on="specieskey",
-                   how="left")
-    ev["lit_host"] = ev.lit_host.fillna(False)
+                   how="left") if len(lab) else sus.assign(lit_host=False)
+    ev["lit_host"] = ev.lit_host.fillna(False).astype(bool)
     # training positives are excluded from the claim — this measures
     # prediction on species the model never saw as labels
     held = ev[ev.label != 1]
