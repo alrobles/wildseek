@@ -35,16 +35,27 @@ def main():
         card["yes_chunks"] += int(t.relevant.sum())
 
     edges = []
-    for f in ("edges_fulltext.csv", "edges_zover.csv"):
-        p = f"{LIT}/{f}"
-        if not os.path.exists(p):
-            continue
-        e = pd.read_csv(p)
-        e["source_file"] = f
-        edges.append(e)
-    if edges:
-        e = pd.concat(edges, ignore_index=True)
+    inter = f"{LIT}/interactions.parquet"
+    if os.path.exists(inter):
+        # unified table — authoritative edge count + pair stats
+        e = pd.read_parquet(inter)
         card["edges"] = len(e)
+        card["unique_pairs"] = int(e.pair.nunique()) \
+            if "pair" in e.columns else None
+    else:
+        for f in ("edges_fulltext.csv", "edges_zover.csv",
+                  "edges_zover_full.csv"):
+            p = f"{LIT}/{f}"
+            if not os.path.exists(p):
+                continue
+            e0 = pd.read_csv(p)
+            e0["source_file"] = f
+            edges.append(e0)
+        e = pd.concat(edges, ignore_index=True) if edges else None
+        if e is not None:
+            card["edges"] = len(e)
+            card["unique_pairs"] = None
+    if e is not None:
         if "verified" in e.columns:
             v = e.verified.fillna(False).astype(str).str.lower()
             card["verified"] = int((v == "true").sum())

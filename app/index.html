@@ -247,6 +247,7 @@ async function load() {
     document.getElementById("lmstat").textContent =
       `${lm.papers} papers → ${lm.chunks} chunks → ` +
       `${lm.yes_chunks} YES → ${lm.edges} edges` +
+      (lm.unique_pairs ? `/${lm.unique_pairs} pairs` : "") +
       (lm.verified ? ` (${lm.verified} judge-verified)` : "") +
       ` · updated ${lm.updated}`;
     document.getElementById("lmlist").innerHTML =
