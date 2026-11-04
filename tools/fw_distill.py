@@ -19,12 +19,16 @@ Usage:
                                                       # string-field misses
   tools/fw_distill.py lint    <run_dir> | <train.jsonl> <holdout.jsonl>
                                                       # pre-launch dataset audit
+  tools/fw_distill.py rebuild <traj_train> <traj_val> <out_dir>
+                                                      # launch-ready v2 dataset
 """
 
 import json
+import os
+import random
 import re
 import sys
-from collections import Counter
+from collections import Counter, defaultdict
 from math import comb
 from pathlib import Path
 
@@ -109,7 +113,10 @@ def _near_pairs(small: list[tuple[int, frozenset]],
 
 
 def _jsonl(path: Path) -> list[dict]:
-    return [json.loads(x) for x in path.read_text().splitlines() if x.strip()]
+    # split on "\n" only: str.splitlines() also breaks on U+2028/\x85/\v,
+    # which are legal raw chars inside a JSON string (traj_all_*.jsonl
+    # carries 16 U+2028) and would corrupt the row count.
+    return [json.loads(x) for x in path.read_text().split("\n") if x.strip()]
 
 
 def mcnemar_p(only_a: int, only_b: int) -> float:
@@ -392,6 +399,242 @@ def cmd_lint(args: list[str]) -> int:
     return 1 if r["warnings"] else 0
 
 
+# ----------------------------------------------------------------- rebuild
+# Launch-dataset rebuild from wildseek-lora traj_*_{train,val}.jsonl —
+# fixes every failure mode the wildseek-all autopsy (and lint above) named:
+#  * holdout must be the pmid/key-GROUPED val split, never re-carved from
+#    train. The starter carves --file with a seeded shuffle and takes the
+#    first n_eval rows, so rebuild pre-places the val rows at exactly the
+#    file positions that shuffle sends to the front: the carve then returns
+#    the grouped val verbatim, zero leak by construction.
+#  * exact-duplicate train rows dropped (normalized user+assistant).
+#  * binary task rebalanced: per-group positives capped at POS_CAP, then a
+#    single per-group negative cap solved so kept negs ~= kept pos.
+#  * non-binary tasks capped at GROUP_CAP rows per pmid/key (singletons
+#    today; guards regrowth).
+#  * eval rows with gold > MAX_GOLD chars dropped (observed truncation
+#    risk), plus a paranoid verbatim-vs-train drop.
+#  * both sides filtered to <=TOK_LIMIT content tokens (chat-template
+#    overhead pushes ~4060-tok rows past --max-seq-len 4096).
+POS_CAP = 20
+GROUP_CAP = 40
+TOK_LIMIT = 4000
+TOK_MODEL = "meta-models/Muse-Glimmer-30B"
+
+
+def _traj_to_chat(r: dict) -> dict | None:
+    """traj {system,instruction,input,output} -> {"messages": [...]}.
+    Mirrors wildseek-lora scripts/fw_convert.convert_row."""
+    out = (r.get("output") or "").strip()
+    if not out:
+        return None
+    user = "\n\n".join(p for p in ((r.get("instruction") or "").strip(),
+                                   (r.get("input") or "").strip()) if p)
+    if not user:
+        return None
+    msgs = []
+    if (r.get("system") or "").strip():
+        msgs.append({"role": "system", "content": r["system"].strip()})
+    msgs += [{"role": "user", "content": user},
+             {"role": "assistant", "content": out}]
+    return {"messages": msgs}
+
+
+def _group(r: dict) -> str:
+    p = r.get("provenance") or {}
+    return str(p.get("pmid") or p.get("key") or "")
+
+
+def _label(r: dict) -> bool | None:
+    try:
+        v = json.loads(r["output"]).get("relevant")
+    except (json.JSONDecodeError, TypeError, AttributeError):
+        return None
+    return v if isinstance(v, bool) else None
+
+
+def _norm_dup(chat: dict) -> tuple:
+    return (_user_text(chat),
+            " ".join(chat["messages"][-1]["content"].split()))
+
+
+def _default_tok():
+    """(counter, mode) — real Glimmer tokenizer when the cookbook venv is
+    importable (FW_COOKBOOK or /tmp/fw-cookbook/training), else chars//3
+    (conservative; --max-seq-len still trims stragglers server-side)."""
+    try:
+        sys.path.insert(0, os.environ.get("FW_COOKBOOK",
+                                        "/tmp/fw-cookbook/training"))
+        from training.renderer.tokenizer import get_tokenizer
+        t = get_tokenizer(TOK_MODEL)
+        return (lambda s: len(t.encode(s))), "glimmer"
+    except Exception:
+        return (lambda s: len(s) // 3), "est3"
+
+
+def _neg_cap(counts: dict, target: int) -> int:
+    """Per-group negative cap whose total kept lands closest to target."""
+    best = (1, None)
+    for k in range(1, max(counts.values(), default=1) + 1):
+        d = abs(sum(min(n, k) for n in counts.values()) - target)
+        if best[1] is None or d < best[1]:
+            best = (k, d)
+    return best[0]
+
+
+def _cap_task(rows: list, pos_cap: int, group_cap: int,
+              drops: Counter) -> list:
+    """Cap one task's (traj, chat) pairs. Binary tasks (output carries a
+    bool 'relevant') get per-group pos cap + a globally-solved neg cap."""
+    labels = [_label(r) for r, _ in rows]
+    if not any(lb is not None for lb in labels):
+        groups = defaultdict(list)
+        for p in rows:
+            groups[_group(p[0])].append(p)
+        kept = []
+        for glist in groups.values():
+            kept += glist[:group_cap]
+            drops["group_cap"] += max(0, len(glist) - group_cap)
+        return kept
+    pos_g, neg_g, other = defaultdict(list), defaultdict(list), []
+    for p, lb in zip(rows, labels):
+        (pos_g[_group(p[0])] if lb else
+         neg_g[_group(p[0])] if lb is False else other).append(p)
+    kept = []
+    for glist in pos_g.values():
+        kept += glist[:pos_cap]
+        drops["pos_cap"] += max(0, len(glist) - pos_cap)
+    k = _neg_cap({g: len(v) for g, v in neg_g.items()}, len(kept))
+    for glist in neg_g.values():
+        kept += glist[:k]
+        drops["neg_cap"] += max(0, len(glist) - k)
+    return kept + other
+
+
+def rebuild(traj_train: list, traj_val: list, seed: int = 7,
+            pos_cap: int = POS_CAP, group_cap: int = GROUP_CAP,
+            tok_limit: int = TOK_LIMIT, max_gold: int = LONG_GOLD,
+            tok=None) -> tuple:
+    """(train, eval, file_rows, manifest). file_rows interleaves eval at
+    the seeded-shuffle front slots so the starter's carve returns the
+    grouped val verbatim."""
+    drops: Counter = Counter()
+    tok_fn, tok_mode = ((tok, "injected") if callable(tok)
+                        else tok or _default_tok())
+
+    def convert(rows, tag):
+        out = []
+        for r in rows:
+            c = _traj_to_chat(r)
+            if c is None:
+                drops[f"empty_{tag}"] += 1
+            else:
+                out.append((r, c))
+        return out
+
+    def dedup(pairs, tag):
+        seen, out = set(), []
+        for r, c in pairs:
+            k = _norm_dup(c)
+            if k in seen:
+                drops[f"dup_{tag}"] += 1
+            else:
+                seen.add(k)
+                out.append((r, c))
+        return out
+
+    # train: convert -> dedup -> per-task caps -> tok filter
+    by_task = defaultdict(list)
+    for p in dedup(convert(traj_train, "train"), "train"):
+        by_task[(p[0].get("provenance") or {}).get("task", "?")].append(p)
+    pairs = []
+    for task, rows in sorted(by_task.items()):
+        pairs += _cap_task(rows, pos_cap, group_cap, drops)
+    kept = []
+    for r, c in pairs:
+        if sum(tok_fn(m["content"]) for m in c["messages"]) <= tok_limit:
+            kept.append((r, c))
+        else:
+            drops["over_tok_train"] += 1
+    train = [c for _, c in kept]
+    tusers = {_user_text(c) for _, c in kept}
+
+    # eval: grouped val, verbatim order — long gold and any accidental
+    # train-verbatim are the only drops (rebalancing eval would game it)
+    eval_rows = []
+    for r, c in dedup(convert(traj_val, "val"), "val"):
+        if len(c["messages"][-1]["content"]) > max_gold:
+            drops["long_gold_val"] += 1
+        elif _user_text(c) in tusers:
+            drops["val_leak"] += 1
+        elif sum(tok_fn(m["content"]) for m in c["messages"]) > tok_limit:
+            drops["over_tok_val"] += 1
+        else:
+            eval_rows.append(c)
+
+    # seeded placement: starter does rows <- shuffle(rows); eval <- rows[:n]
+    perm = list(range(len(train) + len(eval_rows)))
+    random.Random(seed).shuffle(perm)
+    file_rows = [None] * len(perm)
+    for slot, c in zip(perm[:len(eval_rows)], eval_rows):
+        file_rows[slot] = c
+    for slot, c in zip(perm[len(eval_rows):], train):
+        file_rows[slot] = c
+    chk = list(range(len(perm)))
+    random.Random(seed).shuffle(chk)
+    assert [file_rows[chk[j]] for j in range(len(eval_rows))] == eval_rows
+
+    man = {
+        "seed": seed, "n_eval": len(eval_rows), "train_rows": len(train),
+        "file_rows": len(file_rows), "tok_mode": tok_mode,
+        "tok_limit": tok_limit, "pos_cap": pos_cap, "group_cap": group_cap,
+        "max_gold": max_gold, "drops": dict(drops),
+        "train_tasks": dict(Counter(
+            (r.get("provenance") or {}).get("task", "?")
+            for r, _ in kept)),
+        "eval_tasks": dict(Counter(_task(c) for c in eval_rows)),
+        "lint": lint(train, eval_rows),
+    }
+    return train, eval_rows, file_rows, man
+
+
+def cmd_rebuild(args: list) -> int:
+    pos = [a for a in args if not a.startswith("--")]
+    opts = {a.split("=")[0][2:]: a.split("=")[1]
+            for a in args if a.startswith("--") and "=" in a}
+    if len(pos) != 3:
+        sys.exit(__doc__)
+    src_tr, src_va, out_dir = Path(pos[0]), Path(pos[1]), Path(pos[2])
+    m = re.match(r"traj_(.+?)_train", src_tr.name)
+    tag = m.group(1) if m else "v2"
+    train, eval_rows, file_rows, man = rebuild(
+        _jsonl(src_tr), _jsonl(src_va), seed=int(opts.get("seed", 7)),
+        pos_cap=int(opts.get("pos-cap", POS_CAP)),
+        group_cap=int(opts.get("group-cap", GROUP_CAP)),
+        tok_limit=int(opts.get("tok-limit", TOK_LIMIT)),
+        max_gold=int(opts.get("max-gold", LONG_GOLD)))
+    out_dir.mkdir(parents=True, exist_ok=True)
+    stem = f"fw_{tag}_v2"
+    for name, rows in (("train", train), ("eval", eval_rows),
+                       ("file", file_rows)):
+        # ensure_ascii=True: raw U+2028/\x85 inside strings would be split
+        # by the starter's own splitlines() reader — escaped they can't.
+        (out_dir / f"{stem}_{name}.jsonl").write_text(
+            "".join(json.dumps(r) + "\n" for r in rows))
+    man["launch"] = (f"tools/fw_starter.sh launch "
+                     f"{out_dir}/{stem}_file.jsonl wildseek-{tag}v2-<ts> "
+                     f"--n-eval {man['n_eval']} --seed {man['seed']}")
+    (out_dir / f"{stem}_manifest.json").write_text(
+        json.dumps(man, indent=1) + "\n")
+    print(f"{tag}: train {man['train_rows']} eval {man['n_eval']} "
+          f"file {man['file_rows']} drops {man['drops']} tok {man['tok_mode']}")
+    hard = [w for w in man["lint"]["warnings"]
+            if "verbatim" in w or "exact-duplicate" in w]
+    for w in man["lint"]["warnings"]:
+        print(("HARD" if w in hard else "WARN") + ":", w)
+    return 1 if hard else 0
+
+
 def cmd_rescore(run: Path) -> int:
     tuned = _jsonl(run / "predictions_tuned.jsonl")
     r = rescore(tuned)
@@ -441,11 +684,14 @@ def cmd_install(run: Path, name: str) -> int:
 
 if __name__ == "__main__":
     if len(sys.argv) < 3 or sys.argv[1] not in ("check", "install",
-                                               "rescore", "lint"):
+                                               "rescore", "lint",
+                                               "rebuild"):
         sys.exit(__doc__)
     if sys.argv[1] == "rescore":
         sys.exit(cmd_rescore(Path(sys.argv[2])))
     if sys.argv[1] == "lint":
         sys.exit(cmd_lint(sys.argv[2:]))
+    if sys.argv[1] == "rebuild":
+        sys.exit(cmd_rebuild(sys.argv[2:]))
     sys.exit(cmd_check(Path(sys.argv[2])) if sys.argv[1] == "check"
              else cmd_install(Path(sys.argv[2]), sys.argv[3]))

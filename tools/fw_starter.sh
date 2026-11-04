@@ -21,8 +21,9 @@
 set -euo pipefail
 FW_COOKBOOK=${FW_COOKBOOK:-/tmp/fw-cookbook/training}
 CMD=${1:?prepare|launch} FILE=${2:?chat jsonl} RUN=${3:?run-id}
+shift 3  # remaining args (e.g. --n-eval N --seed S) pass through
 export FIREWORKS_API_KEY=${FIREWORKS_API_KEY:-$(cat ~/env/fireworks-token)}
 
 cd "$FW_COOKBOOK"
 exec .venv/bin/python -m examples.sft.muse_glimmer_starter "$CMD" \
-  --surface serverless --file "$FILE" --run-id "$RUN" --max-seq-len 4096
+  --surface serverless --file "$FILE" --run-id "$RUN" --max-seq-len 4096 "$@"

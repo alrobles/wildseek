@@ -2,6 +2,7 @@
 summary.json disagrees with the raw predictions (a half-written or
 corrupt summary must not reach eval/)."""
 import json
+import random
 import sys
 from pathlib import Path
 
@@ -259,3 +260,132 @@ def test_task_classifier():
     assert fd._task(_chunk("u", False)) == "chunk_neg"
     assert fd._task(_chat("u", '{"decision": "rank"}')) == "triage"
     assert fd._task(_chat("u", "not json")) == "other"
+
+
+# ------------------------------------------------------------ rebuild
+# The starter carves holdout from --file via a seeded shuffle; rebuild must
+# pre-place the grouped val so that carve returns it verbatim, and clean
+# train (dedup + per-group caps + neg rebalance) without touching eval
+# distribution.
+
+def _traj(task, key, text, out):
+    return {"system": "sys", "instruction": "do", "input": text,
+            "output": out, "provenance": {"task": task, "pmid": key}}
+
+
+def _chunk_traj(key, text, relevant=True):
+    return _traj("triage", key, text,
+                 json.dumps({"relevant": relevant, "hosts": "bats",
+                             "parasites": "ZEBOV"}))
+
+
+def _carve(file_rows, n_eval, seed):
+    rows = list(file_rows)
+    random.Random(seed).shuffle(rows)
+    return rows[:n_eval], rows[n_eval:]
+
+
+def test_traj_to_chat_mirrors_converter():
+    r = _traj("triage", "pm1", "body text", '{"relevant": true}')
+    assert fd._traj_to_chat(r) == {
+        "messages": [{"role": "system", "content": "sys"},
+                     {"role": "user", "content": "do\n\nbody text"},
+                     {"role": "assistant", "content": '{"relevant": true}'}]}
+    assert fd._traj_to_chat(_traj("triage", "pm1", "x", "  ")) is None
+
+
+def test_neg_cap_solver():
+    assert fd._neg_cap({"a": 40}, 20) == 20
+    # 15+10+5 = 30 hits the target exactly
+    assert fd._neg_cap({"a": 30, "b": 10, "c": 5}, 30) == 15
+    assert fd._neg_cap({}, 5) == 1
+
+
+def test_rebuild_dedup_cap_and_balance():
+    rows = ([_chunk_traj("pmA", f"cap text {i}", True) for i in range(30)]
+            + [_chunk_traj("pmA", f"cap neg {i}", False) for i in range(40)]
+            + [_chunk_traj("pmA", "cap text 0", True)])
+    tr, ev, file_rows, man = fd.rebuild(rows, [], tok=lambda s: 1)
+    assert man["drops"]["dup_train"] == 1
+    pos = sum(json.loads(c["messages"][-1]["content"])["relevant"]
+              for c in tr)
+    assert pos == 20 and len(tr) - pos == 20
+    assert man["drops"]["pos_cap"] == 10
+    assert man["drops"]["neg_cap"] == 20
+
+
+def test_rebuild_holdout_is_grouped_val_verbatim():
+    train_rows = [_chunk_traj(f"pmT{i}", f"train narrative {i}",
+                              bool(i % 2)) for i in range(12)]
+    val_rows = [_chunk_traj(f"pmV{i}", f"val unseen {i}", bool(i % 2))
+                for i in range(6)]
+    tr, ev, file_rows, man = fd.rebuild(train_rows, val_rows, seed=7,
+                                        tok=lambda s: 1)
+    assert ev == [fd._traj_to_chat(r) for r in val_rows]
+    got_ev, got_tr = _carve(file_rows, man["n_eval"], man["seed"])
+    assert got_ev == ev and got_tr == tr
+    assert man["lint"]["warnings"] == []
+
+
+def test_rebuild_eval_drops_only():
+    long_out = json.dumps([{"parasite_taxid": str(i)} for i in range(200)])
+    val = [_traj("extract", "pmV1", "abs text", long_out),
+           _chunk_traj("pmV2", "leak me", True)]
+    tr_rows = [_chunk_traj("pmT1", "leak me", True),
+               _chunk_traj("pmT2", "safe train row words here", False)]
+    tr, ev, file_rows, man = fd.rebuild(tr_rows, val, tok=lambda s: 1)
+    assert ev == []
+    assert man["drops"]["long_gold_val"] == 1
+    assert man["drops"]["val_leak"] == 1
+
+
+def test_rebuild_tok_filter_and_file_union():
+    tr_rows = [_chunk_traj("pmT1", "short", True),
+               _chunk_traj("pmT2", "long " + "w" * 500, False)]
+    va_rows = [_chunk_traj("pmV1", "val row", True)]
+    tr, ev, file_rows, man = fd.rebuild(tr_rows, va_rows, tok_limit=200,
+                                        tok=lambda s: len(s))
+    assert len(tr) == 1 and man["drops"]["over_tok_train"] == 1
+    assert all(r is not None for r in file_rows)
+    assert len(file_rows) == len(tr) + len(ev)
+
+
+def test_cmd_rebuild_writes_package(tmp_path):
+    trf = tmp_path / "traj_all_train.jsonl"
+    vaf = tmp_path / "traj_all_val.jsonl"
+    trf.write_text("\n".join(json.dumps(r) for r in [
+        _chunk_traj(f"pmT{i}", f"train narrative {i}", bool(i % 2))
+        for i in range(10)]))
+    vaf.write_text("\n".join(json.dumps(r) for r in [
+        _chunk_traj(f"pmV{i}", f"val narrative {i}", bool(i % 2))
+        for i in range(4)]))
+    out = tmp_path / "pkg"
+    assert fd.cmd_rebuild([str(trf), str(vaf), str(out), "--seed=7"]) == 0
+    man = json.loads((out / "fw_all_v2_manifest.json").read_text())
+    ev = fd._jsonl(out / "fw_all_v2_eval.jsonl")
+    got_ev, _ = _carve(fd._jsonl(out / "fw_all_v2_file.jsonl"),
+                     man["n_eval"], man["seed"])
+    assert got_ev == ev and man["n_eval"] == 4
+    assert "--n-eval 4 --seed 7" in man["launch"]
+
+
+def test_jsonl_unicode_line_separator(tmp_path):
+    # raw U+2028 inside a JSON string is legal; splitlines() would break
+    # the row in two (traj_all_train.jsonl carries 16 of them)
+    row = {"messages": [{"role": "user", "content": "a b"}]}
+    f = tmp_path / "rows.jsonl"
+    f.write_text(json.dumps(row, ensure_ascii=False) + "\n")
+    assert fd._jsonl(f) == [row]
+
+
+def test_cmd_rebuild_hard_fails_on_leak(tmp_path, monkeypatch):
+    # the val_leak filter makes a verbatim holdout leak unreachable through
+    # real data, so stub lint to prove the gate still fails closed
+    trf = tmp_path / "traj_x_train.jsonl"
+    vaf = tmp_path / "traj_x_val.jsonl"
+    trf.write_text(json.dumps(_chunk_traj("pmT", "same words", True)))
+    vaf.write_text(json.dumps(_chunk_traj("pmV", "other unseen", True)))
+    monkeypatch.setattr(fd, "lint", lambda tr, ev: {
+        "counts": {}, "warnings": [
+            "holdout 0 verbatim in train [0] — cross-split leak"]})
+    assert fd.cmd_rebuild([str(trf), str(vaf), str(tmp_path / "p")]) == 1
