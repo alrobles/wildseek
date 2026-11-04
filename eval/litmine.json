@@ -33,7 +33,16 @@
   "hpai_fulltext_edges": 2682,
   "prospective_auc_lit_labels": 0.738,
   "lit_evidenced_hosts_heldout": 53,
-  "verified_edges": 2351
+  "verified_edges": 2351,
+  "zover_triage": {
+   "chunks": 3165,
+   "yes": 721,
+   "yes_rate": 0.23,
+   "tok_savings": 0.74,
+   "cost_usd": 1.93,
+   "scope": "Capa-0/1 triage spend only (muse-spark-open)",
+   "source": "2026-10-28 autonomous run log (internal progress-report)"
+  }
  },
  "interaction_model": {
   "roc_auc_logreg": 0.715,

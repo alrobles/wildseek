@@ -45,7 +45,7 @@ sin HPC:
 
 Invariantes que NINGÚN agente rompe:
 - Datos crudos nunca se editan; todo derivado es recomputable
-- Grid CONUS 1/100°, EPSG:4326 interno, render final en 3857
+- Grid CONUS 1/120°, EPSG:4326 interno, render final en 3857
 - Toda capa servida pasa por `export_serve.py` (único punto de salida)
 - `suit_*` se enmascara a la M de ecorregiones del 95% de presencias
 
