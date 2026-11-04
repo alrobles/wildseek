@@ -63,6 +63,7 @@
   details summary { cursor:pointer; outline:none; user-select:none; font-weight:500; }
   details.card summary h3 { display:inline-flex; margin:0; }
   details summary::-webkit-details-marker { color:var(--text-muted); }
+  details summary:focus-visible { outline:1px solid var(--accent-blue); outline-offset:-1px; border-radius:4px; }
   .exp-inner { margin-top:8px; border-top:1px solid var(--border-dim); padding-top:6px; }
 
   /* Badges */
@@ -305,7 +306,7 @@
       <div class="legend-labels"><span>Sparse</span><span>Hotspot</span></div>
     </div>
     <div class="legend-row">
-      <div class="legend-title" title="Normalized county-level exposure based on poultry inventory and flock events">County Exposure</div>
+      <div class="legend-title" id="legend-cty" title="Normalized county-level exposure based on poultry inventory and flock events">County Exposure</div>
       <div class="legend-bar" style="background:linear-gradient(90deg, #fee8c8, #fdbb84, #e34a33);"></div>
       <div class="legend-labels"><span>0.0</span><span>0.5</span><span>&ge; 1.0</span></div>
     </div>
@@ -801,6 +802,14 @@ async function load() {
   const ctyModeSel = document.getElementById("ctyMode");
   if (ctyModeSel) {
     ctyModeSel.onchange = e => {
+      const lt = document.getElementById("legend-cty");
+      if (lt) {
+        const dairy = e.target.value === "dairy_exposure";
+        lt.textContent = dairy ? "County Exposure · dairy herds (state)" : "County Exposure";
+        lt.title = dairy ?
+          "Normalized state-level dairy herd exposure (USDA-APHIS)" :
+          "Normalized county-level exposure based on poultry inventory and flock events";
+      }
       if (!map) return;
       if (map.getLayer("ctyFill")) {
         map.setPaintProperty("ctyFill", "fill-color", ctyPaint(e.target.value));
@@ -855,6 +864,18 @@ async function load() {
       return;
     }
 
+    // Check flock point layer before the county fill — the fill spans the
+    // viewport, so it would swallow every flock click while visible
+    const flock = map.getLayer("flockPt") ? map.queryRenderedFeatures(e.point, {layers:["flockPt"]})[0] : null;
+    if (flock) {
+      const p = flock.properties;
+      showClickCard();
+      document.getElementById("ccTitle").textContent = `Flock: ${p.county || 'Unknown'}, ${p.state || ''}`;
+      document.getElementById("ccSub").textContent = `${Number(p.birds_affected || 0).toLocaleString()} birds affected · ${String(p.confirmed || '').slice(0,10)}`;
+      document.getElementById("ccBody").textContent = `Production type: ${p.production || 'Commercial / Backyard'}`;
+      return;
+    }
+
     // Check county fill layer
     const feat = map.queryRenderedFeatures(e.point, {layers:["ctyFill"]})[0];
     if (feat) {
@@ -866,17 +887,6 @@ async function load() {
         `mean risk ${p.mean_risk} · ${p.events} flock confirmations · ` +
         `${Number(p.birds_affected).toLocaleString()} birds affected · ` +
         `${p.dairy_events ?? 0} dairy events (${Number(p.dairy_herds ?? 0).toLocaleString()} herds, state-level)`;
-      return;
-    }
-
-    // Check flock point layer
-    const flock = map.getLayer("flockPt") ? map.queryRenderedFeatures(e.point, {layers:["flockPt"]})[0] : null;
-    if (flock) {
-      const p = flock.properties;
-      showClickCard();
-      document.getElementById("ccTitle").textContent = `Flock: ${p.county || 'Unknown'}, ${p.state || ''}`;
-      document.getElementById("ccSub").textContent = `${Number(p.birds_affected || 0).toLocaleString()} birds affected · ${String(p.confirmed || '').slice(0,10)}`;
-      document.getElementById("ccBody").textContent = `Production type: ${p.production || 'Commercial / Backyard'}`;
       return;
     }
 
