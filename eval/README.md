@@ -11,3 +11,5 @@ Each file is a baked artifact produced during the event window
 
 Unit/integration coverage lives in `tests/` (56 tests, CI-green);
 `docs/eval-model-report.md` narrates the modeling decisions.
+SFT trajectories + LoRA summary are also public at
+https://huggingface.co/datasets/alrobles/wildseek-sft.

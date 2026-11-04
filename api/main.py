@@ -57,7 +57,7 @@ def health() -> dict:
 
 
 @app.get("/species")
-def species(limit: int = Query(200, ge=1, le=1000),
+def species(limit: int = Query(200, ge=1, le=2000),
             cls: str | None = None) -> list[dict]:
     f = DATA / "species_winner.csv"
     if not f.exists():

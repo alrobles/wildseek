@@ -18,6 +18,8 @@ Ecological surveillance for wildlife professionals — not medical advice.
   Best Agentic Use-Case.
 - **Demo**: https://wildseek.ecoseek.org (keyless, baked artifacts) ·
   **Video**: link added at submit time.
+- **Open data**: SFT trajectories + LoRA eval —
+  https://huggingface.co/datasets/alrobles/wildseek-sft
 
 A living host-susceptibility + supply-chain risk monitoring system.
 
