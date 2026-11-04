@@ -1,0 +1,17 @@
+{
+ "generated": "2026-10-28",
+ "model": {
+  "roc_auc": 0.862,
+  "roc_sd": 0.028,
+  "pr_auc": 0.539,
+  "model": "logreg_poly2 [ext]",
+  "alt": "hgbt ext roc 0.856 pr 0.556",
+  "species": 1147,
+  "positives": 159,
+  "cv": "stratified 5-fold x20, per-source-normalized phy + is_patristic_real",
+  "winner_note": "ext feats beat base (0.862 vs 0.850); perm importance: geo 0.31 > env 0.16 > phy 0.12"
+ },
+ "predictions_frozen": 15,
+ "prospective_auc_lit_labels": 0.738,
+ "lit_evidenced_hosts_heldout": 53
+}

@@ -2,7 +2,22 @@
 
 Ecological surveillance for wildlife professionals — not medical advice.
 
-**Meta Global AI Developer Hackathon — Indie track** · live demo: `wildseek.ecoseek.org`
+**Meta Global AI Developer Hackathon — Indie Developer · Push the Frontier** · live demo: `wildseek.ecoseek.org`
+
+## Submission Overview
+
+- **Provenance (Oct 26 – Nov 4, 2026)**: everything in this snapshot
+  was built during the event window (pre-existing deps ledger in
+  `NEW.md`; devel history intentionally excluded).
+- **Meta models** ([Meta Model API](https://dev.meta.ai)):
+  `muse-spark-1.3` orchestration/typed triage, `muse-spark-open`
+  (Fireworks/Baseten open weights) bulk + judge,
+  `muse-spark-1.2-contributor` extraction, `muse-wonder-1.0`
+  briefing, `muse-glimmer-30b` + LoRA triage SFT.
+- **Bonus targets**: Best Build on Meta Open Weight Models ($10k) ·
+  Best Agentic Use-Case.
+- **Demo**: https://wildseek.ecoseek.org (keyless, baked artifacts) ·
+  **Video**: link added at submit time.
 
 A living host-susceptibility + supply-chain risk monitoring system.
 
@@ -63,6 +78,7 @@ the risk zone.
 
 ```bash
 cp -r app/data.sample app/data   # pre-seeded minimal artifacts (3.6 MB)
+cp .env.example .env             # MODEL_API_KEY for live agent calls (optional; demo runs keyless)
 cd serve && docker compose up    # api + frontend on :8080
 ```
 
@@ -140,10 +156,11 @@ constitution in `docs/FACTORY.md`):
 ENTRADA    fetch_aphis -> fresh APHIS detections/species/flocks
 SPEC       agent/planner.py -> run_spec.json (delta: new species -> refit)
 REFIT      (condicional) labels -> dist_frame -> suscept_model
-BUILDER    kuhpc: build_risk -> watershed -> county_exposure -> render -> export
+BUILDER    HPC: risk -> watershed -> exposure -> render -> export
+           (casa: local export, rasters frozen)
 APPROVER   agent/qa.py: quorum 3/4 (codigo/seguridad/ux/brain=spark)
-PRODUCCION rsync -> terminal -> wildseek.ecoseek.org + /health
-BRAIN      run manifest + glimmer (MI210, local) shift log
+PRODUCCION rsync -> serve host -> wildseek.ecoseek.org + /health
+BRAIN      run manifest + shift log (glimmer local en HPC, cloud en casa)
 SELF-HEAL  stage failure -> `muse exec` patches -> one retry
 ```
 
