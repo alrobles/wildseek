@@ -81,7 +81,7 @@
   .wsrow.active { background:var(--bg-card-hover); box-shadow:inset 2px 0 0 var(--accent-pink); }
   .wsrow b { color:var(--accent-pink); font-weight:600; }
   .risk-track { height:3px; background:#21262d; border-radius:2px; margin-top:4px; overflow:hidden; }
-  .risk-fill { height:100%; background:linear-gradient(90deg, #58a6ff, #f781bf); border-radius:2px; }
+  .risk-fill { height:100%; background:var(--accent-pink); border-radius:2px; }
 
   /* Loading skeletons (pulse disabled by reduced-motion rule) */
   .skl-bar { height:8px; border-radius:3px; background:var(--border-dim); animation:skpulse 1.5s ease-in-out infinite; }
@@ -588,7 +588,7 @@ async function load() {
 
       mxEl.innerHTML = cascadeHtml + modelMetrics + litmineMetrics + supplyMetrics +
         `<br><span class="badge badge-amber" title="Domain-specialized triage LoRA adapter">NEW Glimmer triage LoRA</span> ` +
-        `<span class="sub">hold-out exact-match 0.0 → 0.70 (Fireworks)</span>`;
+        `<span class="sub" title="Hold-out evals: triage exact-match 0.0 → 0.70; all-task adapter 0.20 strict / 0.82 semantic (paraphrase-tolerant rescore)">hold-out exact-match 0.0 → 0.70 · all-task 0.82 semantic (Fireworks)</span>`;
     }).catch(() => {
       const mxEl = document.getElementById("mxlist");
       if (mxEl) mxEl.textContent = "metrics unavailable";
@@ -700,7 +700,7 @@ async function load() {
         (Array.isArray(sp) ? sp : []).forEach(r => {
           const o = document.createElement("option");
           o.value = r.specieskey;
-          o.textContent = r.species + (r.review ? " ⚠" : "");
+          o.textContent = r.species + (r.review ? " (review)" : "");
           sel.appendChild(o);
         });
         sel.onchange = () => handleSpeciesSelect(sp, sel.value);
