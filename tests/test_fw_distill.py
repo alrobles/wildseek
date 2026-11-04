@@ -112,3 +112,81 @@ def test_mcnemar_matches_triage_reference():
     # triage run: 28-0 discordant -> 2 * (1/2)^28 = 7.45e-9
     assert fd.mcnemar_p(0, 28) == 7.450580596923828e-09
     assert fd.mcnemar_p(0, 0) == 1.0
+
+
+def _pred(i, gold, ans, exact=False, fields=None, truncated=False):
+    if fields is None:
+        fields = {k: False for k in json.loads(gold)} if _isjson(gold) else {}
+    return {"index": i, "gold": gold, "exact": exact, "fields": fields,
+            "truncated": truncated, "answer_text": ans}
+
+
+def _isjson(s):
+    try:
+        json.loads(s)
+        return True
+    except json.JSONDecodeError:
+        return False
+
+
+def test_rescore_paraphrase_reason_rescues_row():
+    # mirrors wildseek-all decision rows: same stats, reworded -> PARAPHRASE
+    gold = ('{"decision": "rank", "reason": "88/88 accepted_global, n=33 '
+            'adequate, top5 AIC spread 11.64 shows clear winner."}')
+    ans = ('{"decision": "rank", "reason": "88/88 accepted_global, n=33, '
+           'top5 AIC spread 11.64 shows clear winner; proceed."}')
+    r = fd.rescore([_pred(0, gold, ans,
+                          fields={"decision": True, "reason": False})])
+    assert r["exact_match"] == 0.0
+    assert r["exact_match_semantic"] == 1.0
+    assert r["field_accuracy_semantic"]["reason"] == 1.0
+    assert r["field_accuracy"]["reason"] == 0.0
+    assert r["rescued"] == [0]
+
+
+def test_rescore_real_errors_stay_errors():
+    # empty extraction answer (idx 0/21/27/30 pattern) must NOT be rescued
+    gold = ('{"relevant": true, "hosts": "monkeys; domestic pigs; Bats", '
+            '"parasites": "RESTV; Marburgvirus"}')
+    ans = '{"relevant": false, "hosts": "", "parasites": ""}'
+    r = fd.rescore([_pred(0, gold, ans)])
+    assert r["exact_match_semantic"] == 0.0
+    assert r["field_accuracy_semantic"]["hosts"] == 0.0
+    # over-extraction superset (idx 25 pattern): low F1 stays an error
+    gold2 = '{"hosts": "chimpanzee"}'
+    ans2 = '{"hosts": "chimpanzee; chimpanzee community; gorillas; monkeys; bush pigs"}'
+    r2 = fd.rescore([_pred(1, gold2, ans2)])
+    assert r2["field_accuracy_semantic"]["hosts"] == 0.0
+
+
+def test_rescore_num_cov_rounding_and_missing():
+    # gold "spread 1713.9" vs answer "spread 1713" -> covered at 1% rtol
+    assert fd._num_cov("spread 1713.9, n=6621", "spread 1713, n=6621") == 1.0
+    # one optional literal dropped (5/6 = .833 >= SEM_NUM) still passes
+    assert fd._num_cov("n=104 spread 31.37 best 59.92 a 1 b 2 c 3",
+                       "n=104 spread 31.37 a 1 b 2 c 3") == 5 / 6
+    # no gold numbers -> coverage vacuous 1.0
+    assert fd._num_cov("no digits", "none either") == 1.0
+
+
+def test_rescore_fails_closed_on_truncated_and_structural():
+    # truncated + unparseable answer: never rescued
+    gold = '{"decision": "rank", "reason": "n=33 adequate, spread 11.6 clear"}'
+    ans = '{"decision": "rank", "reason": "n=33 adequate, spread 11.6 cle'
+    r = fd.rescore([_pred(0, gold, ans, truncated=True)])
+    assert r["exact_match_semantic"] == 0.0
+    # exact=False with empty fields (structural mismatch) fails closed
+    r2 = fd.rescore([_pred(1, gold, gold, fields={})])
+    assert r2["exact_match_semantic"] == 0.0
+    # unparseable gold fails closed too
+    r3 = fd.rescore([_pred(2, '{"a": "x', '{"a": "x', fields={"a": False})])
+    assert r3["exact_match_semantic"] == 0.0
+
+
+def test_rescore_bool_field_not_semantic():
+    # non-string fields (relevant: bool) can only pass strict
+    gold = '{"relevant": true}'
+    ans = '{"relevant": false}'
+    r = fd.rescore([_pred(0, gold, ans)])
+    assert r["field_accuracy_semantic"]["relevant"] == 0.0
+    assert r["exact_match_semantic"] == 0.0

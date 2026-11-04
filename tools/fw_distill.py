@@ -15,15 +15,28 @@ summary must not become a submission claim.
 Usage:
   tools/fw_distill.py check   <run_dir>
   tools/fw_distill.py install <run_dir> <eval_name>   # eval/<eval_name>.json
+  tools/fw_distill.py rescore <run_dir>               # semantic rescore of
+                                                      # string-field misses
 """
 
 import json
+import re
 import sys
+from collections import Counter
 from math import comb
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 TOL = 1e-9
+
+# rescore thresholds — a string field missed by exact equality still counts
+# when it is a faithful paraphrase: bag-of-words F1 >= SEM_F1 AND >= SEM_NUM
+# of the gold's numeric literals present in the answer (rel tol NUM_RTOL,
+# absorbs gold "1713.9" vs answer "1713"). The wildseek-all misses split
+# cleanly: paraphrases 0.74-0.94 F1, real errors <= 0.40 or empty.
+SEM_F1 = 0.7
+SEM_NUM = 0.8
+NUM_RTOL = 0.01
 
 
 def _jsonl(path: Path) -> list[dict]:
@@ -110,6 +123,101 @@ def check(run: Path) -> list[str]:
     return errs
 
 
+def _tok_f1(gold: str, ans: str) -> float:
+    g = Counter(re.findall(r"[a-z0-9]+", gold.lower()))
+    a = Counter(re.findall(r"[a-z0-9]+", ans.lower()))
+    if not g and not a:
+        return 1.0
+    ov = sum((g & a).values())
+    return 2 * ov / (sum(g.values()) + sum(a.values()))
+
+
+def _num_cov(gold: str, ans: str) -> float:
+    """Fraction of gold numeric literals found in ans within NUM_RTOL."""
+    gv: list[float] = []
+    for x in re.findall(r"-?\d+\.?\d*", gold):
+        try:
+            gv.append(float(x))
+        except ValueError:
+            pass
+    if not gv:
+        return 1.0
+    av = [float(x) for x in re.findall(r"-?\d+\.?\d*", ans)
+          if re.fullmatch(r"-?\d+\.?\d*", x)]
+    hit = sum(any(abs(v - g) <= NUM_RTOL * max(1.0, abs(g)) for v in av)
+              for g in gv)
+    return hit / len(gv)
+
+
+def _loads(s: str) -> dict | None:
+    try:
+        d = json.loads(s)
+    except (json.JSONDecodeError, TypeError):
+        return None
+    return d if isinstance(d, dict) else None
+
+
+def rescore(preds: list[dict]) -> dict:
+    """Re-judge failed string fields as paraphrase vs error.
+
+    A missed field counts semantically when it is a string on both sides,
+    _tok_f1 >= SEM_F1 and _num_cov >= SEM_NUM. Unparseable gold/answer and
+    truncated rows fail closed. Returns strict + semantic field accuracy
+    and row-level exact-match under both judges.
+    """
+    seen: dict[str, int] = {}
+    strict: dict[str, int] = {}
+    sem: dict[str, int] = {}
+    row_strict = row_sem = 0
+    detail: list[dict] = []
+    for p in preds:
+        gold = _loads(p["gold"])
+        ans = _loads(p["answer_text"])
+        ok_sem = not p["truncated"] and gold is not None
+        for k, hit in p["fields"].items():
+            seen[k] = seen.get(k, 0) + 1
+            strict[k] = strict.get(k, 0) + int(bool(hit))
+            pass_sem = bool(hit)
+            if not hit and gold is not None and ans is not None:
+                g, a = gold.get(k), ans.get(k)
+                if isinstance(g, str) and isinstance(a, str):
+                    f1, nc = _tok_f1(g, a), _num_cov(g, a)
+                    pass_sem = f1 >= SEM_F1 and nc >= SEM_NUM
+                    detail.append({"index": p["index"], "field": k,
+                                   "f1": round(f1, 3), "num_cov": round(nc, 3),
+                                   "semantic": pass_sem})
+            sem[k] = sem.get(k, 0) + int(pass_sem)
+            ok_sem &= pass_sem
+        row_strict += int(bool(p["exact"]))
+        # fail closed: exact=False with no scored fields means the mismatch
+        # was structural (key set/JSON shape), not a field paraphrase
+        row_sem += int(ok_sem and (p["exact"] or bool(p["fields"])))
+    n = len(preds)
+    return {
+        "n": n,
+        "exact_match": row_strict / n,
+        "exact_match_semantic": row_sem / n,
+        "field_accuracy": {k: strict[k] / seen[k] for k in seen},
+        "field_accuracy_semantic": {k: sem[k] / seen[k] for k in seen},
+        "rescued": sorted({d["index"] for d in detail if d["semantic"]}),
+        "detail": detail,
+    }
+
+
+def cmd_rescore(run: Path) -> int:
+    tuned = _jsonl(run / "predictions_tuned.jsonl")
+    r = rescore(tuned)
+    print(f"{run.name}: rows {r['n']}  exact {r['exact_match']:.2f} -> "
+          f"semantic {r['exact_match_semantic']:.2f} "
+          f"(rescued rows {r['rescued']})")
+    for k, v in r["field_accuracy_semantic"].items():
+        print(f"  {k:10s} strict {r['field_accuracy'][k]:.2f}  semantic {v:.2f}")
+    for d in r["detail"]:
+        print(f"  idx {d['index']:>3} {d['field']:10s} f1={d['f1']:.2f} "
+              f"num_cov={d['num_cov']:.2f} {'PARAPHRASE' if d['semantic'] else 'ERROR'}")
+    return 0
+
+
 def readme_row(summ: dict, name: str) -> str:
     b, t = summ["base"], summ["tuned"]
     pair = summ["paired"]
@@ -144,7 +252,9 @@ def cmd_install(run: Path, name: str) -> int:
 
 
 if __name__ == "__main__":
-    if len(sys.argv) < 3 or sys.argv[1] not in ("check", "install"):
+    if len(sys.argv) < 3 or sys.argv[1] not in ("check", "install", "rescore"):
         sys.exit(__doc__)
+    if sys.argv[1] == "rescore":
+        sys.exit(cmd_rescore(Path(sys.argv[2])))
     sys.exit(cmd_check(Path(sys.argv[2])) if sys.argv[1] == "check"
              else cmd_install(Path(sys.argv[2]), sys.argv[3]))
