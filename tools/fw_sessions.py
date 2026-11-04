@@ -29,10 +29,9 @@ ACCOUNT = os.environ.get("FIREWORKS_ACCOUNT", "alrobles")
 
 def _key() -> str:
     key = os.environ.get("FIREWORKS_API_KEY")
-    if key:
-        return key
-    with open(os.path.expanduser("~/env/fireworks-token")) as f:
-        return f.read().strip()
+    if not key:
+        raise SystemExit("set FIREWORKS_API_KEY (export it; never commit keys)")
+    return key
 
 
 def _req(method: str, path: str):
