@@ -268,6 +268,24 @@ def test_lint_long_gold_token_budget():
     assert any(">100 toks" in w for w in over["warnings"])
 
 
+def test_cmd_lint_eval_gold_tokens_passthrough(tmp_path, monkeypatch, capsys):
+    # --eval-gold-tokens=N threads the launch's real budget into the
+    # truncation screen instead of the LONG_GOLD char proxy.
+    gold = "w " * 700  # 1400 chars -> char screen warns, 1400 "toks" fits 2048
+    (tmp_path / "tr.jsonl").write_text(
+        json.dumps(_chat("train-user", "ok")) + "\n")
+    (tmp_path / "ho.jsonl").write_text(json.dumps(_chat("u", gold)) + "\n")
+    monkeypatch.setattr(fd, "_default_tok",
+                        lambda: ((lambda s: len(s)), "chars"))
+    pair = [str(tmp_path / "tr.jsonl"), str(tmp_path / "ho.jsonl")]
+    assert fd.cmd_lint(pair) == 1  # char screen: truncation risk
+    capsys.readouterr()
+    assert fd.cmd_lint(pair + ["--eval-gold-tokens=2048"]) == 0
+    assert "truncation" not in capsys.readouterr().out
+    assert fd.cmd_lint(pair + ["--eval-gold-tokens=100"]) == 1
+    assert ">100 toks" in capsys.readouterr().out
+
+
 def test_task_classifier():
     assert fd._task(_chat("u", '[{"a": 1}]')) == "relations"
     assert fd._task(_chunk("u", True)) == "chunk_pos"

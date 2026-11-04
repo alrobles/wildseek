@@ -18,7 +18,9 @@ Usage:
   tools/fw_distill.py rescore <run_dir>               # semantic rescore of
                                                       # string-field misses
   tools/fw_distill.py lint    <run_dir> | <train.jsonl> <holdout.jsonl>
-                                                      # pre-launch dataset audit
+                              [--eval-gold-tokens=N]  # pre-launch dataset audit;
+                                                      # flag = measure golds vs
+                                                      # the launch's token budget
   tools/fw_distill.py rebuild <traj_train> <traj_val> <out_dir>
                                                       # launch-ready v2 dataset
 """
@@ -396,15 +398,23 @@ def lint(train: list[dict], hold: list[dict],
 
 
 def cmd_lint(args: list[str]) -> int:
-    if len(args) == 1 and Path(args[0]).is_dir():
-        run = Path(args[0])
+    pos = [a for a in args if not a.startswith("--")]
+    opts = {a.split("=")[0][2:]: a.split("=")[1]
+            for a in args if a.startswith("--") and "=" in a}
+    if len(pos) == 1 and Path(pos[0]).is_dir():
+        run = Path(pos[0])
         train = _jsonl(run / "train.jsonl")
         hold = _jsonl(run / "holdout.jsonl")
-    elif len(args) == 2:
-        train, hold = _jsonl(Path(args[0])), _jsonl(Path(args[1]))
+    elif len(pos) == 2:
+        train, hold = _jsonl(Path(pos[0])), _jsonl(Path(pos[1]))
     else:
         sys.exit(__doc__)
-    r = lint(train, hold)
+    if "eval-gold-tokens" in opts:
+        tok_fn, _ = _default_tok()
+        r = lint(train, hold, eval_tok=int(opts["eval-gold-tokens"]),
+                 tok=tok_fn)
+    else:
+        r = lint(train, hold)
     for split, c in r["counts"].items():
         print(f"{split}: "
               + "  ".join(f"{k}={v}" for k, v in sorted(c.items())))
