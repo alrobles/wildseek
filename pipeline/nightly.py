@@ -12,14 +12,24 @@ Factory roles -> Muse surfaces:
             stage retries once. Opt-in via WILDSEEK_SELFHEAL=1 or --heal;
             off by default (no unattended code edits without a knob).
 
-Usage:  python pipeline/nightly.py           # full run
+Casa mode (--casa / WILDSEEK_CASA=1): same conveyor, no HPC cluster.
+  BUILDER   local export_serve over fresh parquets; rasters stay frozen
+  APPROVER  qa.check on the local staging dir (no rsync from HPC)
+  BRAIN     cloud model writes the shift log (no glimmer tunnel)
+  Seed once: rsync -a reumanlab-beta:/home/alrobles/wildseek/app/data/
+             app/data/   (the last good serve snapshot)
+
+Usage:  python pipeline/nightly.py           # full run (HPC)
+        python pipeline/nightly.py --casa    # full run, no cluster
         python pipeline/nightly.py --dry     # spec only, no compute
-Cron:   15 3 * * * cd <repo> && WILDSEEK_BEEG=... WILDSEEK_DEPLOY=... \\
+Cron:   15 3 * * * cd <repo> && WILDSEEK_CASA=1 WILDSEEK_DEPLOY=... \\
             MODEL_API_KEY=... .venv/bin/python pipeline/nightly.py
 
-Env: WILDSEEK_BEEG    staging dir on the HPC cluster (required full run)
-     WILDSEEK_DEPLOY  rsync target  host:dir/  for serve_data (required)
+Env: WILDSEEK_BEEG    staging dir on the HPC cluster (HPC mode only)
+     WILDSEEK_DEPLOY  rsync target  host:dir/  for serve_data (required);
+                      casa: reumanlab-beta:/home/alrobles/wildseek/app/data/
      WILDSEEK_KUHPC   ssh alias for the cluster (default "kuhpc")
+     WILDSEEK_CASA=1  casa mode (same as --casa)
      WILDSEEK_SELFHEAL=1 allow `muse exec --yolo` self-heal (default off)
 """
 from __future__ import annotations
@@ -179,6 +189,36 @@ def builder(man):
         raise RuntimeError(f"slurm {jobid} ({script}) -> {state}")
 
 
+@stage("BUILDER")
+def builder_casa(man):
+    """Casa BUILDER: no HPC — re-seed the staging dir from the last good
+    local snapshot, then refresh the text/vector layers from tonight's
+    parquets. Rasters (suit_*, risk, reservoir PNGs) stay frozen."""
+    seed = ROOT / "app/data"
+    if not (seed / "meta.json").exists():
+        raise RuntimeError(
+            "no local serve snapshot to build on (casa mode): seed it with "
+            "rsync -a reumanlab-beta:/home/alrobles/wildseek/app/data/ "
+            "app/data/")
+    stg = ROOT / "data/stage_serve"
+    stg.mkdir(parents=True, exist_ok=True)
+    sh(f"rsync -a --delete {seed}/ {stg}/", timeout=900)
+    sh(f"{PY} {ROOT}/pipeline/export_serve.py --src {ROOT}/data "
+       f"--dst {stg}", timeout=1200)
+    return {"frozen": ["suit_*.png", "risk.png", "reservoir_*.png"]}
+
+
+@stage("APPROVER")
+def approver_casa(man):
+    stg = ROOT / "data/stage_serve"
+    sys.path.insert(0, str(ROOT))
+    from agent import qa
+    rep = qa.check(stg, ROOT / "data", manifest=man)
+    man["qa"] = rep
+    if not rep["pass"]:
+        raise RuntimeError("QA GATES FAILED — deploy blocked")
+
+
 @stage("APPROVER")
 def approver(man):
     stg = ROOT / "data/stage_serve"
@@ -224,48 +264,86 @@ def briefing_stage(man):
        f"app/data/ {tgt}", timeout=300)
 
 
+def _shift_prompt(man) -> str:
+    return ("Eres el shift-log de una fabrica de inteligencia de "
+            "riesgo HPAI. Resume este manifiesto de corrida en UNA "
+            "linea (espanol, tono operario de fabrica): "
+            + json.dumps(man, default=str)[:3000])
+
+
 @stage("BRAIN")
 def brain(man):
     try:
         sys.path.insert(0, str(ROOT))
         from agent.meta_client import MODEL_LOCAL, MetaClient
         c = MetaClient.local_mi210()
-        r = c.chat([{"role": "user", "content":
-                   "Eres el shift-log de una fabrica de inteligencia de "
-                   "riesgo HPAI. Resume este manifiesto de corrida en UNA "
-                   "linea (espanol, tono operario de fabrica): "
-                   + json.dumps(man, default=str)[:3000]}],
-                  model=MODEL_LOCAL, max_tokens=900)
+        r = c.chat([{"role": "user", "content": _shift_prompt(man)}],
+                   model=MODEL_LOCAL, max_tokens=900)
         man["shift_log"] = r["content"] or ""
     except Exception as ex:  # noqa: BLE001
         man["shift_log"] = f"(glimmer unavailable: {ex})"
     print(man["shift_log"])
 
 
+@stage("BRAIN")
+def brain_casa(man):
+    try:
+        sys.path.insert(0, str(ROOT))
+        from agent.meta_client import MODEL_AGENT, MetaClient
+        c = MetaClient()  # cloud default — no HPC tunnel in casa mode
+        r = c.chat([{"role": "user", "content": _shift_prompt(man)}],
+                   model=MODEL_AGENT, max_tokens=900)
+        man["shift_log"] = r["content"] or ""
+    except Exception as ex:  # noqa: BLE001
+        man["shift_log"] = f"(cloud unavailable: {ex})"
+    print(man["shift_log"])
+
+
+def plan_stages(spec_stages: dict, casa: bool, dry: bool) -> list[str]:
+    """Ordered stage names for a run. Casa swaps the three HPC-bound
+    stages for their local/cloud twins; everything else is identical."""
+    names = ["entrada", "spec"]
+    if not dry:
+        if spec_stages.get("refit"):
+            names.append("refit")
+        names += ["builder_casa" if casa else "builder",
+                  "approver_casa" if casa else "approver",
+                  "produccion", "briefing"]
+    names.append("brain_casa" if casa else "brain")
+    return names
+
+
+STAGE_FNS = {"entrada": entrada, "spec": spec, "refit": refit,
+             "builder": builder, "builder_casa": builder_casa,
+             "approver": approver, "approver_casa": approver_casa,
+             "produccion": produccion, "briefing": briefing_stage,
+             "brain": brain, "brain_casa": brain_casa}
+
+
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--dry", action="store_true")
+    ap.add_argument("--casa", action="store_true",
+                    help="casa mode: no HPC cluster (same as "
+                         "WILDSEEK_CASA=1)")
     ap.add_argument("--heal", action="store_true",
                     help="allow muse exec --yolo self-heal on stage "
                          "failure (same as WILDSEEK_SELFHEAL=1)")
     a = ap.parse_args()
 
+    casa = a.casa or os.environ.get("WILDSEEK_CASA", "") == "1"
     RUNS.mkdir(parents=True, exist_ok=True)
     man = {"run": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+           "mode": "casa" if casa else "hpc",
            "stages": {},
            "heal": a.heal or
                    os.environ.get("WILDSEEK_SELFHEAL", "") == "1"}
     try:
-        for s in (entrada, spec):
-            s(man)
-        if not a.dry:
-            rest = ([refit] if man["spec"]["stages"].get("refit")
-                    else []) + [builder, approver, produccion,
-                                briefing_stage]
-            for s in rest + [brain]:
-                s(man)
-        else:
-            brain(man)
+        for name in ("entrada", "spec"):
+            STAGE_FNS[name](man)
+        full = plan_stages(man["spec"]["stages"], casa, a.dry)
+        for name in full[2:]:
+            STAGE_FNS[name](man)
     except Exception as ex:  # noqa: BLE001
         man["failed"] = str(ex)
         print("RUN FAILED:", ex)

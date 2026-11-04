@@ -1,9 +1,10 @@
 """litmine JUDGE — verify extracted edges against their evidence_span.
 
-For each edge, a local muse-glimmer judge answers whether the span
-supports the claimed parasite<->host relation. Rows get verified /
-verdict_why columns; unverified edges stay but are flagged
-(verified=False) so downstream can filter.
+For each edge, a judge model answers whether the span supports the
+claimed parasite<->host relation. Rows get verified / verdict_why
+columns; unverified edges stay but are flagged (verified=False) so
+downstream can filter. Backend is CLI-selectable (cloud default —
+the local glimmer tunnel died with the cluster).
 
     python litmine/verify.py --edges data/litmine/edges_fulltext.csv \
         --jobs 4
@@ -19,7 +20,34 @@ import threading
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "agent"))
-from meta_client import MetaClient  # noqa: E402
+from meta_client import (MODEL_AGENT, MODEL_BASETEN, MODEL_FW_JUDGE,  # noqa: E402
+                         MODEL_LOCAL, MetaClient)
+
+BACKENDS = {"local": MetaClient.local,
+            "local_mi210": MetaClient.local_mi210,
+            "fireworks": MetaClient.fireworks,
+            "baseten": MetaClient.baseten,
+            "meta": MetaClient}
+
+_DEFAULT_MODEL = {"local": MODEL_LOCAL, "local_mi210": MODEL_LOCAL,
+                  "fireworks": MODEL_FW_JUDGE, "baseten": MODEL_BASETEN,
+                  "meta": MODEL_AGENT}
+
+
+def default_model(backend: str, override: str | None) -> str:
+    return override or _DEFAULT_MODEL[backend]
+
+
+def build_parser() -> argparse.ArgumentParser:
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--edges", required=True)
+    ap.add_argument("--out")
+    ap.add_argument("--backend", default="fireworks",
+                    choices=sorted(BACKENDS))
+    ap.add_argument("--model")
+    ap.add_argument("--jobs", type=int, default=4)
+    ap.add_argument("--limit", type=int)
+    return ap
 
 SYS = """You verify parasite-host edges against their evidence span.
 Reply ONLY JSON: {"ok": true|false, "why": <=12 words}
@@ -48,15 +76,7 @@ def judge(client, model, e):
 
 
 def main():
-    ap = argparse.ArgumentParser()
-    ap.add_argument("--edges", required=True)
-    ap.add_argument("--out")
-    ap.add_argument("--backend", default="local",
-                    choices=["local", "fireworks", "meta"])
-    ap.add_argument("--model")
-    ap.add_argument("--jobs", type=int, default=4)
-    ap.add_argument("--limit", type=int)
-    args = ap.parse_args()
+    args = build_parser().parse_args()
 
     import pandas as pd
     df = pd.read_csv(args.edges)
@@ -69,12 +89,8 @@ def main():
         todo = todo.head(args.limit)
     print(f"edges {len(df)} | to verify {len(todo)}", file=sys.stderr)
 
-    client = {"local": MetaClient.local,
-              "local_mi210": MetaClient.local_mi210,
-              "fireworks": MetaClient.fireworks,
-              "meta": MetaClient}[args.backend]()
-    model = args.model or ("muse-glimmer" if args.backend == "local"
-                           else "muse-spark-1.3")
+    client = BACKENDS[args.backend]()
+    model = default_model(args.backend, args.model)
 
     lock = threading.Lock()
     done_ct = [0]

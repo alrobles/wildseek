@@ -40,7 +40,16 @@ MODEL_LOCAL = "muse-glimmer"                     # self-hosted 30B on KU HPC
 # backend when glimmer isn't up. Key via FIREWORKS_API_KEY.
 FW_BASE_URL = "https://api.fireworks.ai/inference/v1"
 MODEL_FW_JUDGE = "accounts/fireworks/models/muse-spark-open"
-FW_PRICES = {MODEL_FW_JUDGE: (0.90, 0.90, 0.90)}   # ~per 1M tok
+# Audited vs real invoice: output (incl. reasoning tokens) bills at
+# ~$2/1M, not $0.90 — the flat triple underestimated spend ~35%.
+FW_PRICES = {MODEL_FW_JUDGE: (0.90, 0.90, 2.00)}   # ~per 1M tok
+
+# Baseten-hosted Muse Spark Open — Meta hackathon provisioning
+# ($100 credit, 2M tok/min, key scoped to the -1026 slug only).
+# Key via BASETEN_API_KEY.
+BASETEN_BASE_URL = "https://inference.baseten.co/v1"
+MODEL_BASETEN = "meta-models/muse-spark-open-1026"
+BASETEN_PRICES = {MODEL_BASETEN: (0.15, 1.25, 4.25)}  # ~per 1M tok
 
 # Non-Muse providers live outside the product stack — internal dev
 # tooling only, excluded from the public snapshot (Muse-only rule).
@@ -70,7 +79,8 @@ class Usage:
 
     def cost_usd(self, model: str) -> float:
         cached_in, pin, pout = PRICES.get(
-            model, FW_PRICES.get(model, (0.0, 0.0, 0.0)))
+            model, FW_PRICES.get(
+                model, BASETEN_PRICES.get(model, (0.0, 0.0, 0.0))))
         billable = self.prompt_tokens - self.cached_tokens
         return (
             billable * pin + self.cached_tokens * cached_in + self.completion_tokens * pout
@@ -160,6 +170,17 @@ class MetaClient:
             raise SystemExit("FIREWORKS_API_KEY is not set "
                              "(export it or use --backend local)")
         return cls(api_key=key, base_url=FW_BASE_URL)
+
+    @classmethod
+    def baseten(cls) -> MetaClient:
+        """Baseten-hosted Muse Spark Open (OpenAI-compatible) — Meta
+        hackathon credit, 2M tok/min. Key works only on
+        MODEL_BASETEN (the -1026 slug). Key from BASETEN_API_KEY."""
+        try:
+            key = os.environ["BASETEN_API_KEY"]
+        except KeyError:
+            raise SystemExit("BASETEN_API_KEY is not set")
+        return cls(api_key=key, base_url=BASETEN_BASE_URL)
 
     def list_models(self) -> list[str]:
         r = self._http.get(f"{self.base}/models", timeout=30)

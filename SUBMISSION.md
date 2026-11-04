@@ -54,8 +54,10 @@ Three layers, all computed during the event window:
 - `muse-wonder-1.0` — `/briefing` narrative over the night's
   artifacts (baked to JSON, demo runs keyless).
 - `muse-spark-1.2-contributor` — bulk OpenAlex literature extraction.
-- `muse-glimmer` (self-hosted, KU HPC) — free offload path; also the
-  litmine JUDGE (see below).
+- `muse-glimmer` (self-hosted, KU HPC) — free offload path during
+  the event; also the litmine JUDGE (see below). Post-event the
+  self-host retired with the cluster; the judge runs on cloud
+  `muse-spark-open` (Fireworks default, Baseten option).
 
 ## litmine — the literature edge factory
 
@@ -67,7 +69,8 @@ full-text papers, with per-edge provenance (PMID + evidence span):
   ~74% token savings ($1.93 per 3k-chunk corpus).
 - **Capa 2**: typed edge extraction (parasite, host, relation,
   evidence_span, geo/date/method) at **$0.0014 per edge**.
-- **Capa 3 (JUDGE)**: self-hosted `muse-glimmer` re-verifies every
+- **Capa 3 (JUDGE)**: `muse-glimmer` (self-hosted during the
+  event; Fireworks/Baseten `muse-spark-open` after) re-verifies every
   edge against its span — rejects serology-only and species-without-
   detection mentions (42% pass on the ZOVER abstracts run). On a
   30-edge audit, raw precision 73% → **100% on judge-verified edges**.
@@ -82,6 +85,16 @@ full-text papers, with per-edge provenance (PMID + evidence span):
   4/15 frozen predictions already carry a mined host edge.
 - Endpoints: `/litmine` (ticker), `/metrics`, `/we-called-it`,
   `/decisions` (executable switch_to delta).
+
+## System-One LoRA (Fireworks serverless, free promo)
+
+Typed triage distilled into `muse-glimmer-30b` + LoRA r8, one epoch
+over 703 trajectories (Fireworks Serverless Training, $0 under the
+Glimmer promo): hold-out exact-match **0.0 → 0.70** (28-0 paired,
+p≈7e-9), `relevant` 0.875→0.95, hosts/parasites 0→0.775, zero
+truncated answers. Adapter:
+`accounts/alrobles/models/muse-starter-sl-wildseek-triage-20261103-215412`.
+Recipe + converter in the `wildseek-lora` companion repo.
 
 ## Nightly loop
 

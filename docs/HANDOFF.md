@@ -1,5 +1,16 @@
 # WildSeek handoff — 2026-10-27
 
+> 2026-11-04 SUPERSEDE — modo casa vigente (ver `docs/FACTORY.md`):
+> **sin cluster** (aislamiento KU: llave HPC en cuarentena, nftables
+> bloquea KU). Deploy en **reumanlab-beta**
+> (`ecoseek-wildseek :8654`, datos en
+> `/home/alrobles/wildseek/app/data`, túnel vía
+> `/etc/cloudflared/config.yml`). Corridas con
+> `nightly.py --casa` (seed: `rsync -a
+> reumanlab-beta:/home/alrobles/wildseek/app/data/ app/data/`).
+> Todo lo de `ssh kuhpc` / `sbatch` debajo es historia hasta el
+> reingreso aprobado por KUIT.
+
 Continuar el desarrollo desde **reumanlab-terminal** mientras la laptop está
 apagada. Todo el estado está en cluster (beegfs) + este repo; la laptop no es
 necesaria salvo indicado.

@@ -20,10 +20,27 @@ BUILDER   kuhpc: risk -> watershed -> exposure -> render -> export
 REFIT     (condicional) labels -> dist_frame -> suscept_model -> reservoir
 APPROVER  quorum 3/4 revisores                 (agent/qa.py)
 ¿HUMANO?  refit o gate fallido -> flag_review / PR, no deploy directo
-PRODUCCION rsync -> terminal -> /health verify
-BRAIN     manifest + shift log (glimmer local)
+PRODUCCION rsync -> serve host -> /health verify
+BRAIN     manifest + shift log (glimmer local en HPC, cloud en casa)
 SELF-HEAL stage falla -> `muse exec` parchea -> 1 retry
 ```
+
+## Modo casa (2026-11-04 — sin cluster, vigente)
+
+El cluster HPC está fuera de alcance (transición de infraestructura).
+`nightly.py --casa` (o `WILDSEEK_CASA=1`) corre el mismo conveyor
+sin HPC:
+
+- **BUILDER**: sin sbatch — re-siembra `data/stage_serve` desde el
+  snapshot local `app/data` y refresca capas texto/vector
+  (`export_serve.py` sobre los parquets frescos de ENTRADA).
+  Rasters congelados: `suit_*`, `risk.png`, `reservoir_*`.
+- **APPROVER**: `qa.check` directo sobre staging local, sin rsync
+  desde el cluster. Los gates no cambian.
+- **BRAIN**: shift log vía modelo cloud (`MetaClient()` default),
+  no `local_mi210`.
+- **PRODUCCION**: `WILDSEEK_DEPLOY=<serve-host>:<data-dir>/`
+  (hosts, paths y seed inicial en `docs/HANDOFF.md`, interno).
 
 Invariantes que NINGÚN agente rompe:
 - Datos crudos nunca se editan; todo derivado es recomputable
@@ -65,3 +82,4 @@ Invariantes que NINGÚN agente rompe:
 - Todo run deja manifest (stage timings, spec, qa, health, shift_log)
 - Self-heal registra qué parcheó `muse exec` y si el retry pasó
 - Los tifs/parquets intermedios quedan en beegfs — recomputable end-to-end
+  (suspendido en modo casa: rasters congelados al snapshot servido)

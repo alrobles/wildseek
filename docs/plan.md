@@ -1,5 +1,10 @@
 # Plan — HPAI Susceptibility Monitor
 
+> 2026-11-04: plan original de construcción (campaña HPC oct-2026).
+> Operación actual: modo casa — ver `docs/FACTORY.md`. El cluster
+> (kuhpc/beegfs) está fuera de alcance hasta que KUIT cierre la
+> investigación; stages SLURM suspendidos, rasters congelados.
+
 Decisions locked 2026-10-26. Flagship: **HPAI H5N1 (clade 2.3.4.4b)**,
 dual track: wildlife susceptibility (global) + U.S. supply-chain
 exposure (county). All compute on **kuhpc SLURM**; all data on

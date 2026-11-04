@@ -75,7 +75,7 @@ rasters — those are cluster outputs; regenerate with
 - Meta Model API throughout: muse-spark-1.3 for typed triage and
   /explain, muse-wonder-1.0 for the narrative /briefing,
   muse-spark-1.2-contributor for bulk extraction; muse-glimmer
-  self-hosted for free offload.
+  self-hosted for free offload (event window; cloud spark-open after).
 - Agentic decision layer with real teeth: an ambiguous-tail selector
   surfaces only suspicious fits; the agent's `switch_to` verdicts are
   executed by `pipeline/refit_switched.R` and both AICs land in

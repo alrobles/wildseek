@@ -24,7 +24,7 @@ import interactions_db  # noqa: E402
 from meta_client import MetaClient  # noqa: E402
 from triage import triage_chunk  # noqa: E402
 from extract_full import extract_chunk  # noqa: E402
-from verify import judge  # noqa: E402
+from verify import BACKENDS, default_model, judge  # noqa: E402
 
 LIT = Path("data/litmine")
 ESEARCH = ("https://eutils.ncbi.nlm.nih.gov/entrez/eutils/"
@@ -119,7 +119,8 @@ def run(args):
         return _brief(conn, brief, dry=True)
 
     fw = MetaClient.fireworks()
-    loc = MetaClient.local()
+    judge_client = BACKENDS[args.judge_backend]()
+    judge_model = default_model(args.judge_backend, args.judge_model)
 
     # triage
     yes_rows, tlock = [], threading.Lock()
@@ -153,7 +154,7 @@ def run(args):
         out = []
         for e in items:
             try:
-                out.append((e, *judge(loc, "muse-glimmer", e)))
+                out.append((e, *judge(judge_client, judge_model, e)))
             except Exception as ex:
                 out.append((e, None, f"err:{str(ex)[:40]}"))
         return r, out
@@ -212,7 +213,7 @@ def _brief(conn, brief, dry=False):
     print(f"[monitor] brief -> {md}", file=sys.stderr)
 
 
-def main():
+def build_parser() -> argparse.ArgumentParser:
     ap = argparse.ArgumentParser()
     sub = ap.add_subparsers(dest="cmd", required=True)
     r = sub.add_parser("run")
@@ -220,8 +221,15 @@ def main():
     r.add_argument("--days", type=int, default=2)
     r.add_argument("--max-papers", type=int, default=100)
     r.add_argument("--jobs", type=int, default=4)
+    r.add_argument("--judge-backend", default="fireworks",
+                   choices=sorted(BACKENDS))
+    r.add_argument("--judge-model", default=None)
     r.add_argument("--dry-run", action="store_true")
-    a = ap.parse_args()
+    return ap
+
+
+def main():
+    a = build_parser().parse_args()
     if a.cmd == "run":
         run(a)
 
