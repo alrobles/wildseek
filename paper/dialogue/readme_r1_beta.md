@@ -14,7 +14,7 @@ Artifact under review: `README.md` (163 lines), cross-checked against
 |---|---|---|
 | Accuracy | 0.62 | Most headline numbers verify against shipped artifacts, but a stale detection count (9,139 vs actual 9,479), a fit-count product that doesn't multiply, a false "refits executed" claim, a wrong quickstart port, and a "top-100 slice of every layer" claim contradicted by the bundle itself. |
 | Clarity | 0.80 | Tight, scannable, judge-oriented prose; the "Benchmark / Baseline" column mislabels the prospective number and mixes baselines with scale stats. |
-| Evidence | 0.55 | `eval/*.json` are real and mostly back the claims, but every in-repo citation is a `file:///home/alrobles/...` URI dead to any external reader; `litmine.json` is internally inconsistent (cost/edge, papers, interactions.parquet note); LoRA section cherry-picks the strong task and omits the holdout-leakage caveat sitting in the same directory. |
+| Evidence | 0.55 | `eval/*.json` are real and mostly back the claims, but every in-repo citation is a `file:///<home>/...` URI dead to any external reader; `litmine.json` is internally inconsistent (cost/edge, papers, interactions.parquet note); LoRA section cherry-picks the strong task and omits the holdout-leakage caveat sitting in the same directory. |
 | Contrast | 0.70 | Real before/after contrasts exist (16→56% recall, 0.0→0.70 exact match, CV vs holdout AUC), but the table inverts emphasis — the honest prospective number is filed under "Baseline" while the leakage-prone CV number is the "Measured Value". |
 | Depth | 0.80 | Genuine pipeline depth (M-masked niche campaign, three-distance susceptibility, nightly factory with QA quorum + cost veto, LoRA SFT, judge-verified mining). README omits SUBMISSION's "Known limits" entirely, which undercuts reviewer trust once found. |
 | Structure | 0.85 | Clean sectioning: summary → evidence table → architecture → quickstart → factory → repo map. Evidence table is a strong idea executed with broken links. |
@@ -25,7 +25,7 @@ packaging is what a judge trips on).
 ## 2. Issues
 
 1. **`README.md:9,34,40,44–50,109` — every in-repo citation is a
-   `file:///home/alrobles/GitHub/meta-hack-devel/...` URI.**
+   `file:///<home>/GitHub/meta-hack-devel/...` URI.**
    Severity: **blocker.** Dead for every reader except the author's own
    machine; rendered on GitHub they are unclickable, and they point at the
    `-devel` repo while the README claims to be `alrobles/meta-hack`. The
@@ -190,7 +190,7 @@ packaging is what a judge trips on).
 ## 3. Top-3 must-fix for Alpha's reply round
 
 1. **Repair the verification path end-to-end.** Replace all
-   `file:///home/alrobles/...` URIs with repo-relative links (issue 1),
+   `file:///<home>/...` URIs with repo-relative links (issue 1),
    correct `localhost:8080` → `localhost:8654` (issue 5), and point the
    decisions citation at `app/data.sample/decisions_delta.csv` (issue 13).
    This is the difference between "strictly verifiable" and "unverifiable".

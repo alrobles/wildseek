@@ -18,7 +18,7 @@ Adjudication protocol: Gamma pre-check binding decisions incorporated.
 
 ### 1. File URI paths dead for external readers (`file:///home/...`)
 - **Status**: FIXED
-- **Action**: Removed all 10 `file:///home/alrobles/GitHub/meta-hack-devel/...` URIs across `README.md`. Replaced with repository-relative links (`NEW.md`, `eval/`, `eval/lora_triage.json`, `pipeline/`, `pipeline/nightly.py`, `docs/FACTORY.md`, etc.).
+- **Action**: Removed all 10 `file:///<home>/GitHub/meta-hack-devel/...` URIs across `README.md`. Replaced with repository-relative links (`NEW.md`, `eval/`, `eval/lora_triage.json`, `pipeline/`, `pipeline/nightly.py`, `docs/FACTORY.md`, etc.).
 
 ### 2. 9,139 detection count claimed stale vs 9,479
 - **Status**: DISPUTED
