@@ -54,6 +54,10 @@ LEAK_J = 0.7      # holdout-vs-train token-Jaccard = cross-split leak
 DUP_J = 0.7       # train-vs-train Jaccard = paper-level over-representation
 MINOR_FLOOR = 0.4  # binary task minority share below this = skewed prior
 LONG_GOLD = 1200   # assistant gold chars = eval truncation risk
+EVAL_GOLD_TOKENS = 2048  # the real bound when a tokenizer is at hand:
+# the starter samples holdout answers at --max-eval-tokens (2048 default),
+# so a gold longer than that is a guaranteed truncated miss — a wasted
+# eval row. Chars are only the tokenizer-less fallback screen.
 
 
 def _task(row: dict) -> str:
@@ -284,13 +288,17 @@ def _base(task: str) -> str:
     return "chunk" if task.startswith("chunk_") else task
 
 
-def lint(train: list[dict], hold: list[dict]) -> dict:
+def lint(train: list[dict], hold: list[dict],
+         eval_tok: int = 0, tok=None) -> dict:
     """Pre-launch audit of a train/holdout pair — facts + warnings.
 
     Catches the wildseek-all failure modes: holdout carved from the train
     pool (exact + near-dup leak), duplicate rows inside train, binary-task
     class skew, paper-level near-dup concentration, and gold outputs long
-    enough to truncate under the eval sampling budget.
+    enough to truncate under the eval sampling budget. When tok and
+    eval_tok are given (the launch's --max-eval-tokens), the truncation
+    screen measures gold tokens against that budget; otherwise it falls
+    back to LONG_GOLD chars.
     """
     ttask = [_task(r) for r in train]
     htask = [_task(r) for r in hold]
@@ -364,15 +372,22 @@ def lint(train: list[dict], hold: list[dict]) -> dict:
     for split, rows in (("train", train), ("holdout", hold)):
         for i, r in enumerate(rows):
             try:
-                n = len(r["messages"][-1]["content"])
+                g = r["messages"][-1]["content"]
             except (KeyError, IndexError, TypeError):
                 continue
-            if n > LONG_GOLD:
-                long_gold.append({"split": split, "index": i, "chars": n})
+            if tok and eval_tok:
+                over = tok(g) > eval_tok
+            else:
+                over = len(g) > LONG_GOLD
+            if over:
+                long_gold.append({"split": split, "index": i,
+                                  "chars": len(g)})
     if long_gold:
         hg = [g["index"] for g in long_gold if g["split"] == "holdout"]
         if hg:
-            warn.append(f"holdout gold >{LONG_GOLD} chars at {hg} — "
+            unit = f">{eval_tok} toks" if (tok and eval_tok) \
+                else f">{LONG_GOLD} chars"
+            warn.append(f"holdout gold {unit} at {hg} — "
                         f"eval truncation risk")
 
     return {"counts": counts, "train_dups": dups, "leaks": leak,
@@ -412,8 +427,10 @@ def cmd_lint(args: list[str]) -> int:
 #    single per-group negative cap solved so kept negs ~= kept pos.
 #  * non-binary tasks capped at GROUP_CAP rows per pmid/key (singletons
 #    today; guards regrowth).
-#  * eval rows with gold > MAX_GOLD chars dropped (observed truncation
-#    risk), plus a paranoid verbatim-vs-train drop.
+#  * eval rows whose gold exceeds the eval sampling budget
+#    (eval_gold_tokens, mirroring the starter's --max-eval-tokens) are
+#    dropped — they are guaranteed truncated misses — plus a paranoid
+#    verbatim-vs-train drop.
 #  * both sides filtered to <=TOK_LIMIT content tokens (chat-template
 #    overhead pushes ~4060-tok rows past --max-seq-len 4096).
 POS_CAP = 20
@@ -513,8 +530,8 @@ def _cap_task(rows: list, pos_cap: int, group_cap: int,
 
 def rebuild(traj_train: list, traj_val: list, seed: int = 7,
             pos_cap: int = POS_CAP, group_cap: int = GROUP_CAP,
-            tok_limit: int = TOK_LIMIT, max_gold: int = LONG_GOLD,
-            tok=None) -> tuple:
+            tok_limit: int = TOK_LIMIT,
+            eval_gold_tokens: int = EVAL_GOLD_TOKENS, tok=None) -> tuple:
     """(train, eval, file_rows, manifest). file_rows interleaves eval at
     the seeded-shuffle front slots so the starter's carve returns the
     grouped val verbatim."""
@@ -563,7 +580,7 @@ def rebuild(traj_train: list, traj_val: list, seed: int = 7,
     # train-verbatim are the only drops (rebalancing eval would game it)
     eval_rows = []
     for r, c in dedup(convert(traj_val, "val"), "val"):
-        if len(c["messages"][-1]["content"]) > max_gold:
+        if tok_fn(c["messages"][-1]["content"]) > eval_gold_tokens:
             drops["long_gold_val"] += 1
         elif _user_text(c) in tusers:
             drops["val_leak"] += 1
@@ -588,12 +605,13 @@ def rebuild(traj_train: list, traj_val: list, seed: int = 7,
         "seed": seed, "n_eval": len(eval_rows), "train_rows": len(train),
         "file_rows": len(file_rows), "tok_mode": tok_mode,
         "tok_limit": tok_limit, "pos_cap": pos_cap, "group_cap": group_cap,
-        "max_gold": max_gold, "drops": dict(drops),
+        "eval_gold_tokens": eval_gold_tokens, "drops": dict(drops),
         "train_tasks": dict(Counter(
             (r.get("provenance") or {}).get("task", "?")
             for r, _ in kept)),
         "eval_tasks": dict(Counter(_task(c) for c in eval_rows)),
-        "lint": lint(train, eval_rows),
+        "lint": lint(train, eval_rows, eval_tok=eval_gold_tokens,
+                     tok=tok_fn),
     }
     return train, eval_rows, file_rows, man
 
@@ -612,7 +630,8 @@ def cmd_rebuild(args: list) -> int:
         pos_cap=int(opts.get("pos-cap", POS_CAP)),
         group_cap=int(opts.get("group-cap", GROUP_CAP)),
         tok_limit=int(opts.get("tok-limit", TOK_LIMIT)),
-        max_gold=int(opts.get("max-gold", LONG_GOLD)))
+        eval_gold_tokens=int(opts.get("eval-gold-tokens",
+                                      EVAL_GOLD_TOKENS)))
     out_dir.mkdir(parents=True, exist_ok=True)
     stem = f"fw_{tag}_v2"
     for name, rows in (("train", train), ("eval", eval_rows),
@@ -621,9 +640,13 @@ def cmd_rebuild(args: list) -> int:
         # by the starter's own splitlines() reader — escaped they can't.
         (out_dir / f"{stem}_{name}.jsonl").write_text(
             "".join(json.dumps(r) + "\n" for r in rows))
+    # keep the dataset's eval-gold bound honest on the launch line: a
+    # non-default budget only scores if --max-eval-tokens is raised to match
+    extra = (f" --max-eval-tokens {man['eval_gold_tokens']}"
+             if man["eval_gold_tokens"] != EVAL_GOLD_TOKENS else "")
     man["launch"] = (f"tools/fw_starter.sh launch "
                      f"{out_dir}/{stem}_file.jsonl wildseek-{tag}v2-<ts> "
-                     f"--n-eval {man['n_eval']} --seed {man['seed']}")
+                     f"--n-eval {man['n_eval']} --seed {man['seed']}{extra}")
     (out_dir / f"{stem}_manifest.json").write_text(
         json.dumps(man, indent=1) + "\n")
     print(f"{tag}: train {man['train_rows']} eval {man['n_eval']} "

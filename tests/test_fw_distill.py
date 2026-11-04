@@ -254,6 +254,20 @@ def test_lint_long_gold_and_cluster_flag():
     assert r["train_clusters"]["chunk"]["rows"] >= 4
 
 
+def test_lint_long_gold_token_budget():
+    # same gold, two measures: >LONG_GOLD chars warns in char mode, but
+    # under the starter's real token budget (tok fn supplied) it is only
+    # flagged when the tokens themselves overflow eval_tok.
+    gold = "w " * 700  # 1400 chars
+    hold = [_chat("u", gold)]
+    char = fd.lint([], hold)
+    assert any("truncation risk" in w for w in char["warnings"])
+    under = fd.lint([], hold, eval_tok=2048, tok=lambda s: len(s))
+    assert not any("truncation risk" in w for w in under["warnings"])
+    over = fd.lint([], hold, eval_tok=100, tok=lambda s: len(s))
+    assert any(">100 toks" in w for w in over["warnings"])
+
+
 def test_task_classifier():
     assert fd._task(_chat("u", '[{"a": 1}]')) == "relations"
     assert fd._task(_chunk("u", True)) == "chunk_pos"
@@ -328,13 +342,20 @@ def test_rebuild_holdout_is_grouped_val_verbatim():
 
 
 def test_rebuild_eval_drops_only():
+    # the eval-gold screen is the token budget, not chars: the 2400-tok
+    # relations gold overflows --max-eval-tokens 2048 and drops, while a
+    # 1300-tok row (over the LONG_GOLD char screen) stays — the sampler
+    # can emit it. (traj_all_val's real 2393/3020-char rows are 725/949
+    # glimmer toks and survive the same way.)
     long_out = json.dumps([{"parasite_taxid": str(i)} for i in range(200)])
+    mid_out = "x" * 1300
     val = [_traj("extract", "pmV1", "abs text", long_out),
-           _chunk_traj("pmV2", "leak me", True)]
+           _traj("extract", "pmV2", "mid row", mid_out),
+           _chunk_traj("pmV3", "leak me", True)]
     tr_rows = [_chunk_traj("pmT1", "leak me", True),
                _chunk_traj("pmT2", "safe train row words here", False)]
-    tr, ev, file_rows, man = fd.rebuild(tr_rows, val, tok=lambda s: 1)
-    assert ev == []
+    tr, ev, file_rows, man = fd.rebuild(tr_rows, val, tok=lambda s: len(s))
+    assert [c["messages"][-1]["content"] for c in ev] == [mid_out]
     assert man["drops"]["long_gold_val"] == 1
     assert man["drops"]["val_leak"] == 1
 
@@ -367,6 +388,14 @@ def test_cmd_rebuild_writes_package(tmp_path):
                      man["n_eval"], man["seed"])
     assert got_ev == ev and man["n_eval"] == 4
     assert "--n-eval 4 --seed 7" in man["launch"]
+    assert "--max-eval-tokens" not in man["launch"]
+    # a non-default eval-gold budget must surface on the launch line or
+    # the extra rows are scored under a budget they can't fit
+    out2 = tmp_path / "pkg2"
+    assert fd.cmd_rebuild([str(trf), str(vaf), str(out2),
+                           "--eval-gold-tokens=64"]) == 0
+    man2 = json.loads((out2 / "fw_all_v2_manifest.json").read_text())
+    assert "--max-eval-tokens 64" in man2["launch"]
 
 
 def test_jsonl_unicode_line_separator(tmp_path):
@@ -385,7 +414,7 @@ def test_cmd_rebuild_hard_fails_on_leak(tmp_path, monkeypatch):
     vaf = tmp_path / "traj_x_val.jsonl"
     trf.write_text(json.dumps(_chunk_traj("pmT", "same words", True)))
     vaf.write_text(json.dumps(_chunk_traj("pmV", "other unseen", True)))
-    monkeypatch.setattr(fd, "lint", lambda tr, ev: {
+    monkeypatch.setattr(fd, "lint", lambda tr, ev, **kw: {
         "counts": {}, "warnings": [
             "holdout 0 verbatim in train [0] — cross-split leak"]})
     assert fd.cmd_rebuild([str(trf), str(vaf), str(tmp_path / "p")]) == 1
