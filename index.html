@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WildSeek — Autonomous Wildlife Susceptibility & Risk Monitor</title>
+  <meta name="description" content="Autonomous wildlife disease surveillance platform forecasting pathogen spillover before detection. Track T2 Push the Frontier.">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+  <header class="site-header">
+    <div class="nav-container">
+      <a href="#" class="brand">
+        <span class="brand-name">WildSeek</span>
+        <span class="brand-track">T2 Push the Frontier</span>
+      </a>
+      <nav class="nav-links">
+        <a href="#evidence">Evidence</a>
+        <a href="#how-it-works">How It Works</a>
+        <a href="#pipeline">Factory Loop</a>
+        <a href="#benchmarks">Benchmarks</a>
+        <a href="https://github.com/alrobles/wildseek" target="_blank" rel="noopener">GitHub</a>
+        <a href="https://wildseek.ecoseek.org" target="_blank" rel="noopener" class="cta-button">Launch Live Monitor ↗</a>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <!-- Hero Section -->
+    <section class="hero">
+      <div class="disclaimer-banner">
+        Operational Notice: Ecological surveillance for wildlife professionals — not medical advice
+      </div>
+      <h1 class="hero-title">
+        Autonomous Wildlife Disease Intelligence<br>Anticipating Spillover Before Detection
+      </h1>
+      <p class="hero-thesis">
+        WildSeek operationalizes macroecological niche modeling, patristic phylogenetic distances, and structured LLM extraction into a continuous risk-intelligence monitor for avian influenza H5N1 (clade 2.3.4.4b) across the contiguous United States.
+      </p>
+      <div class="hero-actions">
+        <a href="https://wildseek.ecoseek.org" target="_blank" rel="noopener" class="btn-primary">
+          Open Live Production Monitor ↗
+        </a>
+        <a href="https://github.com/alrobles/wildseek" target="_blank" rel="noopener" class="btn-secondary">
+          View Repository (alrobles/wildseek)
+        </a>
+        <a href="https://huggingface.co/datasets/alrobles/wildseek-sft" target="_blank" rel="noopener" class="btn-secondary">
+          HuggingFace SFT Trajectories
+        </a>
+      </div>
+    </section>
+
+    <!-- 5-Number Evidence Strip -->
+    <section id="evidence" class="evidence-section">
+      <div class="section-label">Quantitative Evidence Strip (Strictly Verifiable)</div>
+      <div class="evidence-grid">
+        
+        <div class="evidence-card">
+          <div class="evidence-metric">0.74 AUC</div>
+          <div class="evidence-title">Prospective Susceptibility</div>
+          <div class="evidence-desc">
+            Evaluated on 53 held-out lit-evidenced hosts (n admits no tight CI); random stratified 5-fold CV 0.862 (inflated by spatial autocorrelation).
+          </div>
+          <span class="evidence-citation">eval/susceptibility.json</span>
+        </div>
+
+        <div class="evidence-card">
+          <div class="evidence-metric">56% vs 16%</div>
+          <div class="evidence-title">Full-Text Literature Recall</div>
+          <div class="evidence-desc">
+            Full-text mining vs abstract-only scrapers; 100% precision on 12/12 human audit (raw 60% strict / 70% claim-level, n=30).
+          </div>
+          <span class="evidence-citation">eval/litmine.json</span>
+        </div>
+
+        <div class="evidence-card">
+          <div class="evidence-metric">4,854</div>
+          <div class="evidence-title">Mined Interaction Edges</div>
+          <div class="evidence-desc">
+            2,351 judge-verified across 3,740 unique pairs (full ticker: 348 papers; eval corpus: 282 papers, 139 yielded); Capa-0/1 PMC 38%/56%/$1.33 vs ZOVER 23%/74%/$1.93.
+          </div>
+          <span class="evidence-citation">eval/litmine.json</span>
+        </div>
+
+        <div class="evidence-card">
+          <div class="evidence-metric">101,376</div>
+          <div class="evidence-title">Autonomous Fit Rows</div>
+          <div class="evidence-desc">
+            Across 1,147 species (88 pairs, plus refit/buffer rows); 173 ambiguous tail species triaged → 49 flag_review interventions (0 refits executed in-window).
+          </div>
+          <span class="evidence-citation">decisions_delta.csv</span>
+        </div>
+
+        <div class="evidence-card">
+          <div class="evidence-metric">0.00 → 0.70</div>
+          <div class="evidence-title">LoRA SFT Exact Match</div>
+          <div class="evidence-desc">
+            Triage task (28–0 paired win, p ≈ 7.5e-9); all-task run: 0.20 exact / 0.82 semantic agreement (see holdout caveat).
+          </div>
+          <span class="evidence-citation">eval/lora_triage.json</span>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- How It Works: 4 Components -->
+    <section id="how-it-works" class="content-section">
+      <div class="section-label">System Architecture</div>
+      <h2 class="section-title">How WildSeek Operates</h2>
+      <p class="section-lead">
+        From raw biodiversity coordinates to continuous county-level biosecurity forecasting:
+      </p>
+
+      <div class="system-pipeline-grid">
+        <div class="step-card">
+          <div class="step-num">LAYER 01</div>
+          <h3>Three-Distance Framework</h3>
+          <p>
+            Implements the PNAS macroecological model (Robles-Fernández et al. 2022) combining geographic range overlap, 19-bioclim Hutchinsonian environmental niche distances, and patristic phylogenetic distances along real trees (BirdTree Stage2 consensus + dated mammalian phylogeny; 968/1,147 species on real patristic tree branches).
+          </p>
+        </div>
+
+        <div class="step-card">
+          <div class="step-num">LAYER 02</div>
+          <h3>Literature Mining Cascade</h3>
+          <p>
+            High-throughput pipeline extracting host-pathogen interaction edges directly from PMC full-text XML. Ingested 282 eval-corpus papers (348 in the full ticker; 139 yielded edges), filtering irrelevant text with a 38% pass-rate / 56% token reduction before judge verification.
+          </p>
+        </div>
+
+        <div class="step-card">
+          <div class="step-num">LAYER 03</div>
+          <h3>LoRA Domain Distillation</h3>
+          <p>
+            Fine-tuned open-weight models via LoRA parameter-efficient adaptation on Fireworks serverless ($0 promo). Dual evaluation: triage exact-match jumped from 0.00 to 0.70; all-task exact match scored 0.20 and 0.82 author-defined semantic agreement.
+          </p>
+        </div>
+
+        <div class="step-card">
+          <div class="step-num">LAYER 04</div>
+          <h3>Continuous Risk Surface</h3>
+          <p>
+            Combines species susceptibility with 9,139 USDA APHIS wild-bird detections (90-day exponential half-life decay, Gaussian spatial smoothing) across 2,247 HUC8 watersheds and 3,109 CONUS counties, intersecting wild reservoirs with agricultural poultry exposure.
+          </p>
+        </div>
+      </div>
+
+      <!-- Factory Diagram if available -->
+      <div class="diagram-wrapper">
+        <img src="ai-factory-diagrama.svg" alt="WildSeek AI Factory Architecture Diagram">
+      </div>
+    </section>
+
+    <!-- Screenshots / Operational UI -->
+    <section class="content-section">
+      <div class="section-label">Field Operations Interface</div>
+      <h2 class="section-title">Production Interface & Economic Exposure</h2>
+      <p class="section-lead">
+        Operational deployment on wildseek.ecoseek.org providing spatial risk intelligence and economic supply-chain exposure:
+      </p>
+
+      <div class="gallery-grid">
+        <div class="gallery-card">
+          <img src="site.png" alt="WildSeek Operational Interface Map">
+          <div class="gallery-caption">
+            <div class="gallery-title">Live Risk Map & Watershed Query</div>
+            <div class="gallery-sub">Interactive MapLibre GL frontend displaying continuous HUC8 risk contours and localized detection history across CONUS.</div>
+          </div>
+        </div>
+
+        <div class="gallery-card">
+          <img src="egg_prices.png" alt="Supply Chain Egg Prices Impact">
+          <div class="gallery-caption">
+            <div class="gallery-title">Supply-Chain Economic Impact</div>
+            <div class="gallery-sub">82M+ birds in APHIS-confirmed affected flocks (through 2024-02); county exposure mapped across 3,109 counties.</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Nightly Loop -->
+    <section id="pipeline" class="content-section">
+      <div class="section-label">Autonomous Engineering</div>
+      <h2 class="section-title">The Nightly Factory Loop</h2>
+      <p class="section-lead">
+        WildSeek runs unattended nightly cycles (pipeline/nightly.py) under autonomous multi-agent QA governance:
+      </p>
+
+      <pre class="code-block">
+INTAKE     fetch_aphis -> fresh APHIS detections / species / flocks
+SPEC       agent/planner.py -> run_spec.json (delta: new species -> refit)
+REFIT      (conditional) labels -> dist_frame -> suscept_model
+BUILD      HPC: risk -> watershed -> exposure -> render -> export
+           (casa: local standalone export, rasters frozen)
+APPROVE    agent/qa.py: quorum 3/4 (code / security / UX / brain)
+DEPLOY     rsync -> serve host -> wildseek.ecoseek.org + /health verify
+BRAIN      run manifest + shift log
+SELF-HEAL  stage failure -> agent remediation -> one retry
+      </pre>
+    </section>
+
+    <!-- Verified Benchmarks Table -->
+    <section id="benchmarks" class="content-section">
+      <div class="section-label">Verification Matrix</div>
+      <h2 class="section-title">Audited Quantitative Benchmarks</h2>
+      <p class="section-lead">
+        Every number is directly traceable to immutable repository artifacts and eval manifests:
+      </p>
+
+      <div class="data-table-wrapper">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Domain</th>
+              <th>Measured Metric</th>
+              <th>Benchmark & Caveat</th>
+              <th>Source Artifact</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Prospective Susceptibility</strong></td>
+              <td class="mono">AUC 0.74</td>
+              <td>Evaluated on 53 held-out lit hosts (n admits no tight CI); random stratified 5-fold CV ×20 0.862 ± 0.028 (inflated by spatial autocorrelation)</td>
+              <td class="mono">eval/susceptibility.json</td>
+            </tr>
+            <tr>
+              <td><strong>Literature Recall</strong></td>
+              <td class="mono">56% vs 16%</td>
+              <td>Full-text PMC extraction vs abstract-only scrapers</td>
+              <td class="mono">eval/litmine.json</td>
+            </tr>
+            <tr>
+              <td><strong>Literature Extraction</strong></td>
+              <td class="mono">4,854 edges / 3,740 pairs</td>
+              <td>2,351 judge-verified edges (full ticker: 348 papers; eval corpus: 282 papers, 139 yielded); precision 100% on 12/12 audit (raw 60% strict / 70% claim-level, n=30)</td>
+              <td class="mono">eval/litmine.json</td>
+            </tr>
+            <tr>
+              <td><strong>Litmine Cost Efficiency</strong></td>
+              <td class="mono">Capa-0/1 Triage Split</td>
+              <td>PMC: 38% pass / 56% token savings / $1.33 vs ZOVER: 23% pass / 74% token savings / $1.93</td>
+              <td class="mono">eval/litmine.json</td>
+            </tr>
+            <tr>
+              <td><strong>Autonomous Niche Modeling</strong></td>
+              <td class="mono">101,376 fit rows</td>
+              <td>Across 1,147 species (88 pairs, plus refit/buffer rows); 173 ambiguous tail species evaluated</td>
+              <td class="mono">fit_catalog.csv</td>
+            </tr>
+            <tr>
+              <td><strong>Agentic Interventions</strong></td>
+              <td class="mono">49 flag_review deltas</td>
+              <td>Zero refits executed in-window; switch_to deltas executable via pipeline/refit_switched.R</td>
+              <td class="mono">decisions_delta.csv</td>
+            </tr>
+            <tr>
+              <td><strong>Spatial Risk Integration</strong></td>
+              <td class="mono">2,247 HUC8 / 3,109 Counties</td>
+              <td>Fuses 9,139 wild detections with reservoir communities and agricultural exposure</td>
+              <td class="mono">app/data.sample/</td>
+            </tr>
+            <tr>
+              <td><strong>LoRA Triage SFT</strong></td>
+              <td class="mono">0.00 → 0.70 exact match</td>
+              <td>Triage task (28–0 paired win, p ≈ 7.5e-9) on Fireworks serverless</td>
+              <td class="mono">eval/lora_triage.json</td>
+            </tr>
+            <tr>
+              <td><strong>LoRA All-Task SFT</strong></td>
+              <td class="mono">0.20 exact / 0.82 semantic</td>
+              <td>8–0 paired win (p=0.0078); see holdout-leakage caveat in eval/README.md</td>
+              <td class="mono">eval/lora_all.json</td>
+            </tr>
+            <tr>
+              <td><strong>We-Called-It Registry</strong></td>
+              <td class="mono">15 frozen predictions</td>
+              <td>Pre-registered 2026-10-28; 15/15 awaiting-confirmation under post-freeze rules</td>
+              <td class="mono">we_called_it.json</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- Known Limits -->
+    <section class="content-section">
+      <div class="section-label">Scientific Honesty</div>
+      <h2 class="section-title">Known Limits</h2>
+      <ul class="limits-list">
+        <li><strong>Taxonomic Coverage:</strong> 179 of 1,147 species rely on taxonomic-proxy phylogenetic distances due to absence from published consensus trees or hybrid status.</li>
+        <li><strong>Environmental Dimensions:</strong> Suitability is modeled across 19 bioclimatic variables (ERA5-Land 30-year normals); biotic interactions and microclimates remain unmodeled.</li>
+        <li><strong>Zero In-Window Executed Refits:</strong> 49 ambiguous-tail interventions were staged as executable deltas via pipeline/refit_switched.R; zero refits were executed in-window.</li>
+      </ul>
+    </section>
+
+    <!-- Quickstart Section -->
+    <section class="content-section">
+      <div class="section-label">Deployment</div>
+      <h2 class="section-title">Local Quickstart (60 Seconds)</h2>
+      <p class="section-lead">
+        Launch the local web monitor with pre-baked minimal artifacts (port 8654):
+      </p>
+      <pre class="code-block">
+git clone https://github.com/alrobles/wildseek.git
+cd wildseek
+cp -r app/data.sample app/data
+cp .env.example .env
+cd serve && docker compose up
+# Open http://localhost:8654
+      </pre>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="footer-container">
+      <div class="footer-top">
+        <div class="brand">
+          <span class="brand-name">WildSeek</span>
+          <span class="brand-track">T2 Push the Frontier</span>
+        </div>
+        <div class="footer-links">
+          <a href="https://wildseek.ecoseek.org" target="_blank" rel="noopener">Live Demo</a>
+          <a href="https://github.com/alrobles/wildseek" target="_blank" rel="noopener">GitHub (Public Mirror)</a>
+          <a href="https://huggingface.co/datasets/alrobles/wildseek-sft" target="_blank" rel="noopener">HuggingFace Dataset</a>
+          <a href="https://github.com/alrobles/wildseek/blob/main/paper/whitepaper.md" target="_blank" rel="noopener">Whitepaper</a>
+          <a href="https://wildseek.ecoseek.org/health" target="_blank" rel="noopener">Health API</a>
+        </div>
+      </div>
+      <div class="footer-disclaimer">
+        WildSeek is an open computational ecological surveillance research project. It does not provide medical diagnostics, clinical advice, or personal health recommendations.
+      </div>
+    </div>
+  </footer>
+
+</body>
+</html>
