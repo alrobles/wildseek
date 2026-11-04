@@ -12,14 +12,19 @@ synced from the cluster staging dir ($WILDSEEK_BEEG on the HPC side).
 import json
 import os
 import re
+import stat
 import sys
+from mimetypes import guess_type
 from pathlib import Path
 
+import anyio
 import duckdb
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
+from starlette.datastructures import Headers
 from starlette.middleware.gzip import GZipMiddleware
+from starlette.responses import FileResponse
 
 DATA = Path(os.environ.get("DATA_DIR", "app/data"))
 
@@ -42,6 +47,28 @@ class _NoPathsend:
 
 app.add_middleware(GZipMiddleware, minimum_size=1024, compresslevel=6)
 app.add_middleware(_NoPathsend)
+
+
+class _Precompressed(StaticFiles):
+    # export_serve writes <file>.gz siblings for the heavy text
+    # artifacts; serving them verbatim moves the compress cost off the
+    # request path (a compresslevel=6 scan over 18 MB per hit). The
+    # GZip middleware passes responses that already carry
+    # Content-Encoding straight through.
+    async def get_response(self, path, scope):
+        if scope["method"] in ("GET", "HEAD") and \
+                "gzip" in Headers(scope=scope).get("accept-encoding", ""):
+            try:
+                full, st = await anyio.to_thread.run_sync(
+                    self.lookup_path, path + ".gz")
+            except (OSError, ValueError):
+                st = None
+            if st is not None and stat.S_ISREG(st.st_mode):
+                return FileResponse(
+                    full, stat_result=st, media_type=guess_type(path)[0],
+                    headers={"content-encoding": "gzip",
+                             "vary": "Accept-Encoding"})
+        return await super().get_response(path, scope)
 
 
 def q(sql: str) -> list[dict]:
@@ -197,4 +224,4 @@ def briefing() -> JSONResponse:
 STATIC = Path(os.environ.get("STATIC_DIR",
                              Path(__file__).resolve().parent.parent / "app"))
 if STATIC.exists():
-    app.mount("/", StaticFiles(directory=STATIC, html=True), name="app")
+    app.mount("/", _Precompressed(directory=STATIC, html=True), name="app")

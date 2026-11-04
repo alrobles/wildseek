@@ -13,12 +13,18 @@ Runs locally against the exported artifact copies (or on cluster with
 """
 
 import argparse
+import gzip
 import json
 import time
 from pathlib import Path
 
 import duckdb
 import pandas as pd
+
+# api/_Precompressed serves <file>.gz when the client accepts gzip, so
+# text artifacts big enough for compression to matter get a sibling.
+_GZ_EXT = {".geojson", ".json", ".jsonl", ".csv"}
+_GZ_MIN = 200_000
 
 
 def main(src: str, dst: str) -> None:
@@ -203,6 +209,18 @@ def main(src: str, dst: str) -> None:
         pass
     meta = {**prev, **{k: v for k, v in meta.items() if v is not None}}
     (d / "meta.json").write_text(json.dumps(meta, indent=1))
+
+    # .gz siblings for the serve mount's precompressed path; stale
+    # siblings whose base file disappeared (e.g. degraded flyways)
+    # would shadow the 404, so drop them.
+    for f in list(d.iterdir()):
+        if f.suffix == ".gz":
+            if not (d / f.name[:-3]).is_file():
+                f.unlink()
+        elif f.suffix in _GZ_EXT and f.stat().st_size > _GZ_MIN:
+            gz = f.with_name(f.name + ".gz")
+            if not gz.exists() or gz.stat().st_mtime < f.stat().st_mtime:
+                gz.write_bytes(gzip.compress(f.read_bytes(), 9, mtime=0))
     print("exported to", d)
     con.close()
 
