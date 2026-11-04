@@ -46,7 +46,8 @@ Three layers, all computed during the event window:
   Result: **49 flag_review with substantive reasons** — sparse
   endemics, marine mammals on implausible pairs, small-n unstable
   ellipsoids — written to `decisions_delta.csv`.
-  `switch_to` verdicts are executable by `pipeline/refit_switched.R`.
+  Verdicts recorded as executable deltas via `pipeline/refit_switched.R`;
+  no switches triggered in-window (all 173 tails accept/flag_review).
 - The same model is the **release gate**: `scripts/release.sh`
   publishes to the public repo only after a Muse review of the
   exact diff returns an explicit SHIP; NO-SHIP, review failure or a
@@ -84,15 +85,17 @@ full-text papers, with per-edge provenance (PMID + evidence span):
   **p_host AUC 0.74 on 53 literature-evidenced held-out hosts**, and
   4/15 frozen predictions already carry a mined host edge.
 - Endpoints: `/litmine` (ticker), `/metrics`, `/we-called-it`,
-  `/decisions` (executable switch_to delta).
+  `/decisions` (executable delta; no switches triggered in-window).
 
 ## System-One LoRA (Fireworks serverless, free promo)
 
 Typed triage distilled into `muse-glimmer-30b` + LoRA r8, one epoch
 over 703 trajectories (Fireworks Serverless Training, $0 under the
-Glimmer promo): hold-out exact-match **0.0 → 0.70** (28-0 paired,
+Glimmer promo): triage task hold-out exact-match **0.0 → 0.70** (28-0 paired,
 p≈7e-9), `relevant` 0.875→0.95, hosts/parasites 0→0.775, zero
-truncated answers. Adapter:
+truncated answers; broader all-task run reached 0.20 exact / 0.82
+after semantic rescore (see `eval/lora_all.json` and `eval/README.md`
+for holdout-leakage caveat). Adapter:
 `accounts/alrobles/models/muse-starter-sl-wildseek-triage-20261103-215412`.
 Recipe + converter in the `wildseek-lora` companion repo.
 
