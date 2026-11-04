@@ -65,9 +65,18 @@
   #wslist { max-height:220px; overflow-y:auto; scrollbar-width:thin; }
   .wsrow { padding:6px 6px; border-bottom:1px solid var(--border-dim); cursor:pointer; border-radius:4px; margin-bottom:2px; }
   .wsrow:hover { background:var(--bg-card-hover); }
+  .wsrow:focus-visible { outline:1px solid var(--accent-blue); outline-offset:-1px; }
+  .wsrow.active { background:var(--bg-card-hover); box-shadow:inset 2px 0 0 var(--accent-pink); }
   .wsrow b { color:var(--accent-pink); font-weight:600; }
   .risk-track { height:3px; background:#21262d; border-radius:2px; margin-top:4px; overflow:hidden; }
   .risk-fill { height:100%; background:linear-gradient(90deg, #58a6ff, #f781bf); border-radius:2px; }
+
+  /* Clickcard dismiss */
+  #clickcard { position:relative; }
+  .cc-close { position:absolute; top:5px; right:6px; background:none; border:1px solid transparent;
+              color:var(--text-muted); font-size:13px; cursor:pointer; padding:1px 6px;
+              border-radius:4px; line-height:1; }
+  .cc-close:hover { color:var(--text-main); background:var(--bg-card-hover); border-color:var(--border-subtle); }
 
   /* Lists & Buttons */
   .more-btn { background:var(--border-dim); color:var(--text-muted); border:1px solid var(--border-subtle);
@@ -221,6 +230,7 @@
   </div>
 
   <div class="card" id="clickcard" style="display:none">
+    <button type="button" id="ccClose" class="cc-close" title="Dismiss (Esc)" aria-label="Dismiss inspection card">&times;</button>
     <h3 id="ccTitle"></h3>
     <div class="sub" id="ccSub"></div>
     <div id="ccBody" style="margin-top:4px" class="tabular"></div>
@@ -290,16 +300,21 @@ map.addControl(new maplibregl.NavigationControl());
 
 let META = {};
 let STATE_BBOXES = {};
+const REDUCED_MOTION = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
 // Parallel initial loader
 async function load() {
   // 1. Health check (independent)
   fetch('/health').then(r=>r.json()).then(h => {
     const healthDot = document.getElementById('healthdot');
-    if (healthDot) healthDot.style.background = (h.status && h.status.toLowerCase()==='ok') ? '#238636' : '#da3633';
+    if (healthDot) {
+      const ok = h.status && h.status.toLowerCase()==='ok';
+      healthDot.style.background = ok ? '#238636' : '#da3633';
+      healthDot.title = `Live API health: ${h.status || 'unknown'} (/health)`;
+    }
   }).catch(() => {
     const healthDot = document.getElementById('healthdot');
-    if (healthDot) healthDot.style.background = '#8b949e';
+    if (healthDot) { healthDot.style.background = '#8b949e'; healthDot.title = 'API health unreachable (/health)'; }
   });
 
   // 2. Fetch META & initialize map base sources
@@ -322,6 +337,8 @@ async function load() {
     return meta;
   }).catch(err => {
     console.error("meta error", err);
+    const metaEl = document.getElementById("meta");
+    if (metaEl) metaEl.textContent = "metadata unavailable";
     return {};
   });
 
@@ -414,7 +431,17 @@ async function load() {
           <div class="sub" style="margin-top:3px;"><span title="Total wild-bird HPAI detections">${w.n_det} detections</span> · <span title="Peak pixel-level surveillance risk in this watershed">max ${(w.max_risk ?? 0).toFixed(2)}</span></div>
         </div>`;
       }).join("");
-      wl.querySelectorAll(".wsrow").forEach(el => el.onclick = () => explainWatershed(el.dataset.huc, el.dataset.states));
+      wl.querySelectorAll(".wsrow").forEach(el => {
+        el.tabIndex = 0;
+        el.setAttribute("role", "button");
+        const pick = () => {
+          wl.querySelectorAll(".wsrow.active").forEach(a => a.classList.remove("active"));
+          el.classList.add("active");
+          explainWatershed(el.dataset.huc, el.dataset.states);
+        };
+        el.onclick = pick;
+        el.onkeydown = ev => { if (ev.key === "Enter" || ev.key === " ") { ev.preventDefault(); pick(); } };
+      });
     }).catch(() => {
       const wl = document.getElementById("wslist");
       if (wl) wl.textContent = "watershed watchlist unavailable";
@@ -503,7 +530,7 @@ async function load() {
             const h = r.host || r.host_texts || "?";
             const v = String(r.verified).toLowerCase()==="true" ? `<span style="color:#3fb950" title="Audited and confirmed by LLM-judge verification">✓ </span>` : "";
             const pmid = encodeURIComponent(String(r.pmid ?? ""));
-            return `<div style="margin:3px 0;"><a href="https://pubmed.ncbi.nlm.nih.gov/${pmid}/" target="_blank" style="color:var(--accent-blue)">PMID ${esc(r.pmid)}</a> ` +
+            return `<div style="margin:3px 0;"><a href="https://pubmed.ncbi.nlm.nih.gov/${pmid}/" target="_blank" rel="noopener" style="color:var(--accent-blue)">PMID ${esc(r.pmid)}</a> ` +
               `${v}${esc(p)} → ${esc(h)} <span class="sub">${esc(r.relation)}` +
               (r.evidence_span ? ` · “${esc(String(r.evidence_span).slice(0,75))}”` : "") +
               `</span></div>`;
@@ -655,6 +682,29 @@ async function load() {
     };
   }
 
+  // Clickcard show/dismiss helpers (Esc or × clears card + watershed selection)
+  const clickCard = document.getElementById("clickcard");
+  const showClickCard = () => {
+    if (!clickCard) return;
+    clickCard.style.display = "block";
+    clickCard.scrollIntoView({block:"nearest", behavior: REDUCED_MOTION ? "auto" : "smooth"});
+  };
+  const hideClickCard = () => {
+    if (clickCard) clickCard.style.display = "none";
+    document.querySelectorAll(".wsrow.active").forEach(a => a.classList.remove("active"));
+  };
+  const ccCloseBtn = document.getElementById("ccClose");
+  if (ccCloseBtn) ccCloseBtn.onclick = hideClickCard;
+  document.addEventListener("keydown", e => {
+    if (e.key === "Escape" && clickCard && clickCard.style.display !== "none") hideClickCard();
+  });
+
+  // Pointer cursor over inspectable map features
+  ["detPt","ctyFill","flockPt"].forEach(id => {
+    map.on("mousemove", id, () => { map.getCanvas().style.cursor = "pointer"; });
+    map.on("mouseleave", id, () => { map.getCanvas().style.cursor = ""; });
+  });
+
   // Map click interaction
   map.on("click", async e => {
     const card = document.getElementById("clickcard");
@@ -664,7 +714,7 @@ async function load() {
     const det = map.queryRenderedFeatures(e.point, {layers:["detPt"]})[0];
     if (det) {
       const p = det.properties;
-      card.style.display = "block";
+      showClickCard();
       document.getElementById("ccTitle").textContent = p.species ? `HPAI+ ${p.species}` : "HPAI+ detection";
       document.getElementById("ccSub").textContent = `${p.county}, ${p.state} · ${String(p.date).slice(0,10)}` + (p.strain ? ` · ${p.strain}` : "");
       document.getElementById("ccBody").textContent = "confirmed HPAI detection (NWHC/APHIS)";
@@ -675,7 +725,7 @@ async function load() {
     const feat = map.queryRenderedFeatures(e.point, {layers:["ctyFill"]})[0];
     if (feat) {
       const p = feat.properties;
-      card.style.display = "block";
+      showClickCard();
       document.getElementById("ccTitle").textContent = `${p.name} Co., ${p.state}`;
       document.getElementById("ccSub").textContent = `poultry exposure ${p.exposure} · dairy exposure ${p.dairy_exposure ?? 0}`;
       document.getElementById("ccBody").textContent =
@@ -689,7 +739,7 @@ async function load() {
     const flock = map.queryRenderedFeatures(e.point, {layers:["flockPt"]})[0];
     if (flock) {
       const p = flock.properties;
-      card.style.display = "block";
+      showClickCard();
       document.getElementById("ccTitle").textContent = `Flock: ${p.county || 'Unknown'}, ${p.state || ''}`;
       document.getElementById("ccSub").textContent = `${Number(p.birds_affected || 0).toLocaleString()} birds affected · ${String(p.confirmed || '').slice(0,10)}`;
       document.getElementById("ccBody").textContent = `Production type: ${p.production || 'Commercial / Backyard'}`;
@@ -703,7 +753,7 @@ async function load() {
     });
 
     if (!activeLayers) {
-      card.style.display = "block";
+      showClickCard();
       document.getElementById("ccTitle").textContent = "No active layer at click";
       document.getElementById("ccSub").textContent = "Enable a layer to inspect (detections, exposure, or flocks)";
       document.getElementById("ccBody").textContent = "";
@@ -872,7 +922,7 @@ async function explainWatershed(huc, statesStr) {
     });
     if (bounds) {
       try {
-        map.fitBounds([[bounds[0], bounds[1]], [bounds[2], bounds[3]]], {padding: 40, maxZoom: 8, duration: 1200});
+        map.fitBounds([[bounds[0], bounds[1]], [bounds[2], bounds[3]]], {padding: 40, maxZoom: 8, duration: REDUCED_MOTION ? 0 : 1200});
       } catch(e) {}
     }
   }
@@ -880,6 +930,7 @@ async function explainWatershed(huc, statesStr) {
   const card = document.getElementById("clickcard");
   if (!card) return;
   card.style.display = "block";
+  card.scrollIntoView({block:"nearest", behavior: REDUCED_MOTION ? "auto" : "smooth"});
   document.getElementById("ccTitle").textContent = "loading…";
   document.getElementById("ccSub").textContent = "";
   document.getElementById("ccBody").innerHTML = "";
