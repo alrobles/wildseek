@@ -1,0 +1,145 @@
+{
+ "scope": "full ticker: 348 papers / 3,957 chunks / 1,024 YES (Oct-28 bake); eval corpus: 282 papers / 772 chunks / 303 YES",
+ "updated": "2026-10-28 09:15",
+ "pipeline": "papers -> chunks -> YES triage -> typed edges -> rank",
+ "papers": 348,
+ "chunks": 3957,
+ "yes_chunks": 1024,
+ "edges": 4854,
+ "unique_pairs": 3740,
+ "verified": 2351,
+ "recent": [
+  {
+   "pmid": "PMC10288128",
+   "parasite": "avian influenza",
+   "host": "poultry flocks",
+   "parasite_taxid": "",
+   "host_taxid": "",
+   "relation": "parasite_of",
+   "evidence_span": "avian influenza resurgence in flocks",
+   "section_type": "RESULTS",
+   "verified": true
+  },
+  {
+   "pmid": "PMC10288128",
+   "parasite": "HPAI H5N1",
+   "host": "poultry flocks",
+   "parasite_taxid": "",
+   "host_taxid": "",
+   "relation": "parasite_of",
+   "evidence_span": "HPAI H5N1 resurgence and spread in poultry flocks",
+   "section_type": "RESULTS",
+   "verified": true
+  },
+  {
+   "pmid": "PMC11747629",
+   "parasite": "H4Nx",
+   "host": "turkeys",
+   "parasite_taxid": "",
+   "host_taxid": "",
+   "relation": "parasite_of",
+   "evidence_span": "The isolation rates from H4Nx in ducks, geese, chickens, environment, and turkeys were 14.80% (515/3,479)",
+   "section_type": "RESULTS",
+   "verified": true
+  },
+  {
+   "pmid": "PMC11747629",
+   "parasite": "H4Nx",
+   "host": "chickens",
+   "parasite_taxid": "",
+   "host_taxid": "",
+   "relation": "parasite_of",
+   "evidence_span": "The isolation rates from H4Nx in ducks, geese, chickens, environment, and turkeys were 14.80% (515/3,479)",
+   "section_type": "RESULTS",
+   "verified": true
+  },
+  {
+   "pmid": "PMC11747629",
+   "parasite": "H4Nx",
+   "host": "geese",
+   "parasite_taxid": "",
+   "host_taxid": "",
+   "relation": "parasite_of",
+   "evidence_span": "The isolation rates from H4Nx in ducks, geese, chickens, environment, and turkeys were 14.80% (515/3,479)",
+   "section_type": "RESULTS",
+   "verified": true
+  },
+  {
+   "pmid": "PMC11747629",
+   "parasite": "H4Nx",
+   "host": "ducks",
+   "parasite_taxid": "",
+   "host_taxid": "",
+   "relation": "parasite_of",
+   "evidence_span": "The isolation rates from H4Nx in ducks, geese, chickens, environment, and turkeys were 14.80% (515/3,479)",
+   "section_type": "RESULTS",
+   "verified": true
+  },
+  {
+   "pmid": "PMC11747629",
+   "parasite": "H4Nx subtype AIVs",
+   "host": "seals",
+   "parasite_taxid": "",
+   "host_taxid": "",
+   "relation": "parasite_of",
+   "evidence_span": "H4Nx subtype AIVs can also infect mammals, with an isolation rate of 0.23% (8/3,479) in pigs, muskrats, and seals.",
+   "section_type": "RESULTS",
+   "verified": true
+  },
+  {
+   "pmid": "PMC11747629",
+   "parasite": "H4Nx subtype AIVs",
+   "host": "muskrats",
+   "parasite_taxid": "",
+   "host_taxid": "",
+   "relation": "parasite_of",
+   "evidence_span": "H4Nx subtype AIVs can also infect mammals, with an isolation rate of 0.23% (8/3,479) in pigs, muskrats, and seals.",
+   "section_type": "RESULTS",
+   "verified": true
+  },
+  {
+   "pmid": "PMC11747629",
+   "parasite": "H4Nx subtype AIVs",
+   "host": "pigs",
+   "parasite_taxid": "",
+   "host_taxid": "",
+   "relation": "parasite_of",
+   "evidence_span": "H4Nx subtype AIVs can also infect mammals, with an isolation rate of 0.23% (8/3,479) in pigs, muskrats, and seals.",
+   "section_type": "RESULTS",
+   "verified": true
+  },
+  {
+   "pmid": "PMC11747629",
+   "parasite": "H4 subtype AIVs",
+   "host": "blue-winged teal",
+   "parasite_taxid": "",
+   "host_taxid": "",
+   "relation": "parasite_of",
+   "evidence_span": "The isolation rate from blue-winged teal was 16.11% (442/2,743) in the wild bird population.",
+   "section_type": "RESULTS",
+   "verified": false
+  },
+  {
+   "pmid": "PMC11747629",
+   "parasite": "H4 subtype AIVs",
+   "host": "Common Mallard",
+   "parasite_taxid": "",
+   "host_taxid": "",
+   "relation": "parasite_of",
+   "evidence_span": "The Common Mallard was the primary host of wild birds, accounting for 49.25% (1,351/2,743) of the wild bird population",
+   "section_type": "RESULTS",
+   "verified": false
+  },
+  {
+   "pmid": "PMC10288128",
+   "parasite": "bird flu",
+   "host": "humans",
+   "parasite_taxid": "",
+   "host_taxid": "",
+   "relation": "parasite_of",
+   "evidence_span": "humans that contracted bird flu in Nigeria",
+   "section_type": "RESULTS",
+   "verified": true
+  }
+ ]
+}

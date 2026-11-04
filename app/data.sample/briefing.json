@@ -1,0 +1,113 @@
+{
+ "headline": "Piscataqua-Salmon Falls and Winnipesaukee River dominate tonight's avian-influenza wildlife susceptibility hotspots, with Lower Minnesota and Pamlico Sound trailing at roughly half their scores.",
+ "hotspots": [
+  "Piscataqua-Salmon Falls (MA, ME, NH) \u2014 score 1.000, n=258",
+  "Winnipesaukee River (NH) \u2014 score 0.997, n=81",
+  "Lower Minnesota (MN) \u2014 score 0.531, n=195",
+  "Pamlico Sound (NC) \u2014 score 0.414, n=162",
+  "Cedar-Portage (OH) \u2014 score 0.338, n=194"
+ ],
+ "methods_note": "Wildlife susceptibility was modeled with xnicher ellipsoid models fitted to ERA5 bioclimatic normals using 95 percent ecoregions as the accessible area and APHIS wild-bird detections rasterized with a 1/120-degree recency kernel aggregated to HUC8 watersheds.",
+ "watchlist": [
+  "Marine mammals Eubalaena glacialis and Balaenoptera borealis were fitted on terrestrial bioclimatic variables with low marine fractions, making their accessible-area and background assumptions implausible.",
+  "Several sparse species with n below 60 \u2014 including Rhynchopsitta terrisi, Sciurus alleni, Charadrius nivosus, Urocyon littoralis, and Pterodroma feae \u2014 show near-universal acceptance and unstable ellipsoids, warranting System-2 review of accessible area, background, and small-sample validity."
+ ],
+ "facts": {
+  "catalog": [
+   1148,
+   -97062.2845303084
+  ],
+  "top_pairs": [
+   [
+    "bio09 x bio19",
+    99
+   ],
+   [
+    "bio02 x bio14",
+    55
+   ],
+   [
+    "bio04 x bio19",
+    53
+   ],
+   [
+    "bio04 x bio12",
+    49
+   ],
+   [
+    "bio01 x bio15",
+    44
+   ]
+  ],
+  "top_watersheds": [
+   [
+    "Piscataqua-Salmon Falls",
+    "MA,ME,NH",
+    1.0,
+    258
+   ],
+   [
+    "Winnipesaukee River",
+    "NH",
+    0.997,
+    81
+   ],
+   [
+    "Lower Minnesota",
+    "MN",
+    0.531,
+    195
+   ],
+   [
+    "Pamlico Sound",
+    "NC",
+    0.414,
+    162
+   ],
+   [
+    "Cedar-Portage",
+    "OH",
+    0.338,
+    194
+   ],
+   [
+    "Cow",
+    "KS",
+    0.229,
+    87
+   ],
+   [
+    "Shiawassee",
+    "MI",
+    0.175,
+    102
+   ],
+   [
+    "Huron",
+    "MI",
+    0.16,
+    52
+   ]
+  ],
+  "t1_decisions": {
+   "accept": 1147
+  },
+  "flagged_species": [
+   "Eubalaena glacialis: Marine mammal Eubalaena glacialis fit on terrestrial bio09xbio13; marine_frac=0.10 implausible M/background; escalate M ",
+   "Rhynchopsitta terrisi: occ_cells=25 <60 sparse; 88 accepted_global risks overfit/degenerate M; escalate to System-2 for M/background check",
+   "Sciurus alleni: nobs=36 <60 sparse; accepted_global=88 with spread 17.9 but small-sample ellipsoid unstable; escalate to System-2",
+   "Charadrius nivosus: Sparse n=35<60 despite 88/88 accepted_global; marine_frac=0.34 risks M bias; escalate bio08xbio18 winner to System-2",
+   "Urocyon littoralis: n=19 <60 sparse; AIC spread 4.4 unreliable despite 88 accepted_global; escalate to System-2 small-sample review",
+   "Geomys attwateri: n=59 <60 sparse despite 88/88 accepted_global; AIC spread 10.9 borderline; escalate to System-2 for small-sample validat",
+   "Balaenoptera borealis: n=54 sparse <60 with top5 AIC spread 3.8 near-tied, no clear winner; marine mammal on bio09xbio13 terrestrial vars needs",
+   "Microtus townsendii: n=45 <60 sparse; 88 accepted_global but small-sample ellipsoid unstable; escalate to System-2 review",
+   "Pterodroma feae: n=19 sparse (<60) despite 88 accepted_global; AIC spread 12.4 unstable at tiny n; escalate to System-2 for M/plausibilit",
+   "Puffinus opisthomelas: n=47<60 sparse despite 88/88 accepted_global; small-sample ellipsoid covariance unstable; escalate M/background to Syste"
+  ],
+  "tail_decisions": {
+   "accept": 124,
+   "flag_review": 49
+  }
+ },
+ "model": "muse-wonder-1.0"
+}

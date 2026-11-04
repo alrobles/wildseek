@@ -1,0 +1,44 @@
+{
+  "steps": 44,
+  "base": {
+    "label": "base",
+    "exact_match": 0.0,
+    "unterminated": 3,
+    "prompt_tokens": 23483,
+    "sampled_tokens": 37742,
+    "field_accuracy": {
+      "relevant": 0.875,
+      "hosts": 0.0,
+      "parasites": 0.0
+    }
+  },
+  "tuned": {
+    "label": "tuned",
+    "exact_match": 0.7,
+    "unterminated": 0,
+    "prompt_tokens": 23483,
+    "sampled_tokens": 1168,
+    "field_accuracy": {
+      "relevant": 0.95,
+      "hosts": 0.775,
+      "parasites": 0.775
+    }
+  },
+  "promoted_model": "accounts/alrobles/models/muse-starter-sl-wildseek-triage-20261103-215412",
+  "exact_match_delta": 0.7,
+  "paired": {
+    "only_tuned_correct": 28,
+    "only_base_correct": 0,
+    "p_value": 7.450580596923828e-09
+  },
+  "session": "ts-9164148cdfe54d1f85b36fe6ccab8ac1",
+  "log": "muse_starter_logs/wildseek-triage-20261103-215412",
+  "cost": {
+    "training": "$0 (promotional)",
+    "evaluation_sampling": {
+      "prompt_tokens": 46966,
+      "sampled_tokens": 38910,
+      "note": "billed separately from training at published per-token rates"
+    }
+  }
+}

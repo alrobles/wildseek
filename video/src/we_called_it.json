@@ -1,0 +1,165 @@
+{
+ "predicted_on": "2026-10-28",
+ "model": "xplus susceptibility (phy+env+geo)",
+ "note": "unlabeled species ranked by p_host; confirmed when a literature edge published after predicted_on names the species as host",
+ "predictions": [
+  {
+   "specieskey": 5229389,
+   "species": "Phalaropus tricolor",
+   "p_host": 0.744,
+   "ci": [
+    0.55,
+    0.879
+   ],
+   "status": "awaiting-confirmation"
+  },
+  {
+   "specieskey": 5846430,
+   "species": "Leucophaeus pipixcan",
+   "p_host": 0.739,
+   "ci": [
+    0.543,
+    0.875
+   ],
+   "status": "awaiting-confirmation"
+  },
+  {
+   "specieskey": 8000602,
+   "species": "Mareca penelope",
+   "p_host": 0.737,
+   "ci": [
+    0.564,
+    0.854
+   ],
+   "status": "awaiting-confirmation"
+  },
+  {
+   "specieskey": 2481139,
+   "species": "Larus argentatus",
+   "p_host": 0.685,
+   "ci": [
+    0.608,
+    0.757
+   ],
+   "status": "awaiting-confirmation"
+  },
+  {
+   "specieskey": 5231132,
+   "species": "Zonotrichia leucophrys",
+   "p_host": 0.668,
+   "ci": [
+    0.525,
+    0.798
+   ],
+   "status": "awaiting-confirmation"
+  },
+  {
+   "specieskey": 2491872,
+   "species": "Passerella iliaca",
+   "p_host": 0.661,
+   "ci": [
+    0.533,
+    0.794
+   ],
+   "status": "awaiting-confirmation"
+  },
+  {
+   "specieskey": 2484183,
+   "species": "Euphagus cyanocephalus",
+   "p_host": 0.657,
+   "ci": [
+    0.553,
+    0.759
+   ],
+   "status": "awaiting-confirmation"
+  },
+  {
+   "specieskey": 8214667,
+   "species": "Anas crecca",
+   "p_host": 0.656,
+   "ci": [
+    0.552,
+    0.756
+   ],
+   "status": "awaiting-confirmation"
+  },
+  {
+   "specieskey": 5231140,
+   "species": "Zonotrichia albicollis",
+   "p_host": 0.611,
+   "ci": [
+    0.524,
+    0.695
+   ],
+   "status": "awaiting-confirmation"
+  },
+  {
+   "specieskey": 2498375,
+   "species": "Mergus serrator",
+   "p_host": 0.597,
+   "ci": [
+    0.482,
+    0.715
+   ],
+   "status": "awaiting-confirmation"
+  },
+  {
+   "specieskey": 2498246,
+   "species": "Melanitta perspicillata",
+   "p_host": 0.579,
+   "ci": [
+    0.413,
+    0.735
+   ],
+   "status": "awaiting-confirmation"
+  },
+  {
+   "specieskey": 2492192,
+   "species": "Melospiza lincolnii",
+   "p_host": 0.573,
+   "ci": [
+    0.418,
+    0.714
+   ],
+   "status": "awaiting-confirmation"
+  },
+  {
+   "specieskey": 2440965,
+   "species": "Odocoileus virginianus",
+   "p_host": 0.572,
+   "ci": [
+    0.469,
+    0.661
+   ],
+   "status": "awaiting-confirmation"
+  },
+  {
+   "specieskey": 2484184,
+   "species": "Euphagus carolinus",
+   "p_host": 0.569,
+   "ci": [
+    0.495,
+    0.637
+   ],
+   "status": "awaiting-confirmation"
+  },
+  {
+   "specieskey": 5231142,
+   "species": "Passerculus sandwichensis",
+   "p_host": 0.568,
+   "ci": [
+    0.405,
+    0.726
+   ],
+   "status": "awaiting-confirmation"
+  }
+ ],
+ "sweeps": [
+  {
+   "swept_on": "2026-10-29",
+   "source": "OpenAlex search 15 frozen species x H5N1/avian-influenza, from_publication_date:2026-10-28",
+   "post_freeze_hits": 0,
+   "note": "6 H5N1 works dated 2026-10-28 (freeze day, excluded); none names a frozen species. All statuses stay awaiting-confirmation."
+  }
+ ]
+}

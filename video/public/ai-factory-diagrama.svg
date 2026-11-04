@@ -1,0 +1,111 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1300" height="600" viewBox="0 0 1300 600" font-family="system-ui, -apple-system, sans-serif">
+<defs>
+<marker id="arr" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#8b949e"/></marker>
+<marker id="arrR" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#f85149"/></marker>
+</defs>
+<rect x="0" y="0" width="1300" height="600" fill="#0b1020"/>
+<text x="20" y="32" fill="#ffffff" font-size="21" font-weight="bold">AI Factory — design v2 (with review fixes)</text>
+<text x="20" y="52" fill="#8b949e" font-size="12">Brain = constitution · 3 deterministic gates + 1 LLM judge · quorum 3/4 · judicious approver · cost gate · criticality table</text>
+
+<!-- Brain -->
+<rect x="545" y="62" width="230" height="66" rx="10" fill="#1a1503" stroke="#f5c518" stroke-width="2"/>
+<text x="660" y="90" fill="#f5c518" font-size="18" font-weight="bold" text-anchor="middle">Brain</text>
+<text x="660" y="110" fill="#8b949e" font-size="11" text-anchor="middle">architecture · review · style · criticality</text>
+<line x1="610" y1="128" x2="280" y2="238" stroke="#f5c518" stroke-width="1" stroke-dasharray="5,4" opacity="0.6"/>
+<line x1="700" y1="128" x2="730" y2="238" stroke="#f5c518" stroke-width="1" stroke-dasharray="5,4" opacity="0.6"/>
+
+<!-- Intake -->
+<rect x="20" y="240" width="120" height="64" rx="10" fill="#141b30" stroke="#4a5a7a"/>
+<text x="80" y="268" fill="#ffffff" font-size="15" font-weight="bold" text-anchor="middle">Intake</text>
+<text x="80" y="287" fill="#8b949e" font-size="11" text-anchor="middle">voice · github · doc</text>
+
+<!-- Spec writer -->
+<rect x="170" y="240" width="130" height="64" rx="10" fill="#141b30" stroke="#4a5a7a"/>
+<text x="235" y="268" fill="#ffffff" font-size="15" font-weight="bold" text-anchor="middle">Spec writer</text>
+<text x="235" y="287" fill="#ff7b54" font-size="12" text-anchor="middle">Opus</text>
+
+<!-- Builder -->
+<rect x="330" y="240" width="130" height="64" rx="10" fill="#141b30" stroke="#58a6ff" stroke-width="2"/>
+<text x="395" y="268" fill="#ffffff" font-size="15" font-weight="bold" text-anchor="middle">Builder</text>
+<text x="395" y="287" fill="#ff7b54" font-size="12" text-anchor="middle">Opus · TDD</text>
+
+<!-- Reviewers -->
+<rect x="490" y="140" width="140" height="46" rx="8" fill="#141b30" stroke="#4a5a7a"/>
+<text x="560" y="168" fill="#ffffff" font-size="13" text-anchor="middle">Security · gate</text>
+<rect x="490" y="200" width="140" height="46" rx="8" fill="#141b30" stroke="#4a5a7a"/>
+<text x="560" y="228" fill="#ffffff" font-size="13" text-anchor="middle">UX · gate</text>
+<rect x="490" y="260" width="140" height="46" rx="8" fill="#141b30" stroke="#4a5a7a"/>
+<text x="560" y="288" fill="#ffffff" font-size="13" text-anchor="middle">Brain · Spark</text>
+<rect x="490" y="320" width="140" height="46" rx="8" fill="#141b30" stroke="#4a5a7a"/>
+<text x="560" y="348" fill="#ffffff" font-size="13" text-anchor="middle">Code · gate</text>
+
+<!-- Approver -->
+<rect x="660" y="240" width="140" height="64" rx="10" fill="#141b30" stroke="#58a6ff" stroke-width="2"/>
+<text x="730" y="266" fill="#ffffff" font-size="15" font-weight="bold" text-anchor="middle">Approver</text>
+<text x="730" y="285" fill="#58a6ff" font-size="11" text-anchor="middle">spark-1.3 · final judgment</text>
+
+<!-- Human gate -->
+<rect x="830" y="240" width="120" height="64" rx="10" fill="#141b30" stroke="#4a5a7a"/>
+<text x="890" y="268" fill="#ffffff" font-size="15" font-weight="bold" text-anchor="middle">Human?</text>
+<text x="890" y="287" fill="#8b949e" font-size="10" text-anchor="middle">criticality table</text>
+
+<!-- Main / PR -->
+<rect x="980" y="195" width="120" height="56" rx="8" fill="#141b30" stroke="#3fb950"/>
+<text x="1040" y="218" fill="#ffffff" font-size="14" font-weight="bold" text-anchor="middle">Main</text>
+<text x="1040" y="235" fill="#3fb950" font-size="11" text-anchor="middle">direct</text>
+<rect x="980" y="300" width="120" height="56" rx="8" fill="#141b30" stroke="#bc8cff"/>
+<text x="1040" y="323" fill="#ffffff" font-size="14" font-weight="bold" text-anchor="middle">PR</text>
+<text x="1040" y="340" fill="#bc8cff" font-size="11" text-anchor="middle">you approve</text>
+
+<!-- Produccion -->
+<rect x="1130" y="240" width="130" height="64" rx="10" fill="#141b30" stroke="#3fb950" stroke-width="2"/>
+<text x="1195" y="272" fill="#ffffff" font-size="14" font-weight="bold" text-anchor="middle">Production</text>
+
+<!-- Flow arrows -->
+<line x1="140" y1="272" x2="168" y2="272" stroke="#8b949e" stroke-width="1.5" marker-end="url(#arr)"/>
+<line x1="300" y1="272" x2="328" y2="272" stroke="#8b949e" stroke-width="1.5" marker-end="url(#arr)"/>
+<line x1="460" y1="272" x2="480" y2="272" stroke="#8b949e" stroke-width="1.5"/>
+<line x1="480" y1="163" x2="480" y2="343" stroke="#8b949e" stroke-width="1.5"/>
+<line x1="480" y1="163" x2="490" y2="163" stroke="#8b949e" stroke-width="1.5"/>
+<line x1="480" y1="223" x2="490" y2="223" stroke="#8b949e" stroke-width="1.5"/>
+<line x1="480" y1="283" x2="490" y2="283" stroke="#8b949e" stroke-width="1.5"/>
+<line x1="480" y1="343" x2="490" y2="343" stroke="#8b949e" stroke-width="1.5"/>
+<line x1="630" y1="163" x2="640" y2="163" stroke="#8b949e" stroke-width="1.5"/>
+<line x1="630" y1="223" x2="640" y2="223" stroke="#8b949e" stroke-width="1.5"/>
+<line x1="630" y1="283" x2="640" y2="283" stroke="#8b949e" stroke-width="1.5"/>
+<line x1="630" y1="343" x2="640" y2="343" stroke="#8b949e" stroke-width="1.5"/>
+<line x1="640" y1="163" x2="640" y2="343" stroke="#8b949e" stroke-width="1.5"/>
+<line x1="640" y1="272" x2="658" y2="272" stroke="#8b949e" stroke-width="1.5" marker-end="url(#arr)"/>
+<line x1="800" y1="272" x2="828" y2="272" stroke="#8b949e" stroke-width="1.5" marker-end="url(#arr)"/>
+<line x1="950" y1="272" x2="965" y2="272" stroke="#8b949e" stroke-width="1.5"/>
+<line x1="965" y1="223" x2="965" y2="328" stroke="#8b949e" stroke-width="1.5"/>
+<line x1="965" y1="223" x2="978" y2="223" stroke="#8b949e" stroke-width="1.5" marker-end="url(#arr)"/>
+<line x1="965" y1="328" x2="978" y2="328" stroke="#8b949e" stroke-width="1.5" marker-end="url(#arr)"/>
+<line x1="1100" y1="223" x2="1115" y2="223" stroke="#8b949e" stroke-width="1.5"/>
+<line x1="1100" y1="328" x2="1115" y2="328" stroke="#8b949e" stroke-width="1.5"/>
+<line x1="1115" y1="223" x2="1115" y2="328" stroke="#8b949e" stroke-width="1.5"/>
+<line x1="1115" y1="272" x2="1128" y2="272" stroke="#8b949e" stroke-width="1.5" marker-end="url(#arr)"/>
+
+<!-- Retry loop -->
+<line x1="730" y1="304" x2="730" y2="470" stroke="#f85149" stroke-width="1.5"/>
+<line x1="730" y1="470" x2="395" y2="470" stroke="#f85149" stroke-width="1.5"/>
+<line x1="395" y1="470" x2="395" y2="306" stroke="#f85149" stroke-width="1.5" marker-end="url(#arrR)"/>
+<text x="562" y="464" fill="#f85149" font-size="11" text-anchor="middle">bounded retry (1x)</text>
+
+<!-- Cost gate -->
+<line x1="700" y1="304" x2="700" y2="338" stroke="#f85149" stroke-width="1" stroke-dasharray="4,3"/>
+<rect x="630" y="340" width="140" height="56" rx="8" fill="#1a0d0d" stroke="#f85149" stroke-dasharray="5,3"/>
+<text x="700" y="362" fill="#f85149" font-size="12" font-weight="bold" text-anchor="middle">Cost gate (veto)</text>
+<text x="700" y="379" fill="#8b949e" font-size="10" text-anchor="middle">spend ≤ budget</text>
+
+<!-- Criticality -->
+<line x1="890" y1="304" x2="890" y2="318" stroke="#8b949e" stroke-width="1" stroke-dasharray="4,3"/>
+<rect x="805" y="320" width="170" height="76" rx="8" fill="#141b30" stroke="#8b949e" stroke-dasharray="5,3"/>
+<text x="890" y="340" fill="#ffffff" font-size="11" text-anchor="middle">model refit → PR</text>
+<text x="890" y="358" fill="#ffffff" font-size="11" text-anchor="middle">Δ data &gt; 5% → PR</text>
+<text x="890" y="376" fill="#3fb950" font-size="11" text-anchor="middle">refresh only → direct</text>
+
+<!-- Footer -->
+<text x="20" y="540" fill="#8b949e" font-size="12">Quorum: code + security always approve, ≥3/4 total. The LLM approver reads the 4 verdicts and emits approve / reject / note. All output lands in qa_report.json + manifest (auditable, traceable, fixable).</text>
+<text x="20" y="560" fill="#8b949e" font-size="12">v2 changes: judicious approver (not just AND) · cost gate with veto · criticality table in Brain · honest reviewers (3 gates + 1 judge) · TDD per stage or off the diagram.</text>
+</svg>

@@ -1,0 +1,226 @@
+"""Approver — quorum 3/4 de cuatro revisores + veto de costo
+(docs/FACTORY.md).
+
+  codigo    gates duros: conteos, bounds, PNGs no vacios, geojson valido
+  seguridad la corrida no colapsa datos vs. el run previo
+  ux        meta.json completo + archivos que lee el frontend existen
+  brain     muse-spark lee el manifest y emite veredicto razonado
+  costo     VETO: spend del run en agent_calls.jsonl <= QA_COST_CAP_USD
+
+Aprueba si codigo+seguridad pasan Y >=3/4 en total Y el veto de costo
+no dispara. El resultado cae en <serve>/qa_report.json; el fallo
+bloquea deploy y escala al canal humano.
+"""
+from __future__ import annotations
+
+import json
+import os
+import re
+import time
+from pathlib import Path
+
+import pandas as pd
+
+META_KEYS_UI = ("suit_bbox", "risk_png", "risk_bbox",
+                "reservoir_sum_png", "n_species", "n_detections")
+
+
+def _meta(serve: Path) -> dict | None:
+    """meta.json absent/corrupt -> reviewers report a failed check instead
+    of crashing the approver."""
+    try:
+        return json.loads((serve / "meta.json").read_text())
+    except Exception:
+        return None
+
+
+def _codigo(serve: Path) -> list[dict]:
+    c = []
+    m = _meta(serve)
+    if m is None:
+        return [{"name": "meta.json readable", "ok": False}]
+    c.append({"name": "n_species>=1000",
+              "ok": (m.get("n_species") or 0) >= 1000,
+              "value": m.get("n_species")})
+    c.append({"name": "n_detections>=8000",
+              "ok": (m.get("n_detections") or 0) >= 8000,
+              "value": m.get("n_detections")})
+    sus = serve / "susceptibility.parquet"
+    if sus.exists():
+        s = pd.read_parquet(sus)
+        c.append({"name": "p_host bounds",
+                  "ok": bool(s["p_host"].between(0, 1).all()),
+                  "value": f"{s.p_host.min():.3f}-{s.p_host.max():.3f}"})
+        c.append({"name": "top-10 mostly known hosts",
+                  "ok": bool(s.nlargest(10, "p_host")["label"]
+                             .eq(1).mean() >= 0.7),
+                  "value": f"{s.nlargest(10,'p_host')['label'].mean():.0%}"})
+    else:
+        c.append({"name": "susceptibility.parquet", "ok": False})
+    det = serve / "detections.geojson"
+    try:
+        n = len(json.loads(det.read_text()).get("features", []))
+        c.append({"name": "detections.geojson", "ok": n >= 8000,
+                  "value": n})
+    except Exception as ex:  # noqa: BLE001
+        c.append({"name": "detections.geojson parse", "ok": False,
+                  "value": str(ex)[:80]})
+    return c
+
+
+def _seguridad(serve: Path, data: Path) -> list[dict]:
+    c = []
+    prev = data / "detect_seen.json"
+    m = _meta(serve)
+    if m is None:
+        return [{"name": "meta.json readable", "ok": False}]
+    if prev.exists():
+        p = json.loads(prev.read_text())
+        drop = (p.get("n", 0) - (m.get("n_detections") or 0)) \
+            / max(p.get("n", 1), 1)
+        c.append({"name": "no detection collapse (>5% drop fails)",
+                  "ok": drop < 0.05,
+                  "value": f"{drop:+.1%}"})
+    for png in ("risk.png", "reservoir_sum.png"):
+        p = serve / png
+        c.append({"name": f"{png} non-trivial",
+                  "ok": p.exists() and p.stat().st_size > 50_000,
+                  "value": p.stat().st_size if p.exists() else 0})
+    return c
+
+
+def _ux(serve: Path) -> list[dict]:
+    m = _meta(serve)
+    if m is None:
+        return [{"name": "meta.json readable", "ok": False}]
+    missing = [k for k in META_KEYS_UI if k not in m]
+    c = [{"name": "meta.json ui keys", "ok": not missing,
+          "value": f"missing: {missing}" if missing else "all"}]
+    for png in ("risk.png", "reservoir_sum.png", "reservoir_max.png",
+                "reservoir_prob.png"):
+        c.append({"name": f"{png} exists",
+                  "ok": (serve / png).exists()})
+    return c
+
+
+BRAIN_SCHEMA = {
+    "type": "json_schema",
+    "json_schema": {
+        "name": "wildseek_brain_verdict",
+        "strict": True,
+        "schema": {
+            "type": "object",
+            "properties": {
+                "verdict": {"type": "string",
+                            "enum": ["approve", "reject"]},
+                "reason": {"type": "string"},
+            },
+            "required": ["verdict", "reason"],
+            "additionalProperties": False,
+        },
+    },
+}
+
+
+def _parse_brain_json(text: str) -> dict:
+    """Parse a brain verdict, tolerating ```json fences and the legacy
+    {"approve": bool} shape."""
+    t = (text or "").strip()
+    t = re.sub(r"^```(?:json)?\s*|\s*```$", "", t).strip()
+    j = json.loads(t)
+    if "verdict" not in j and "approve" in j:
+        j = {"verdict": "approve" if j["approve"] else "reject",
+             "reason": j.get("reason", "")}
+    if j.get("verdict") not in ("approve", "reject"):
+        raise ValueError(f"bad verdict: {j!r}"[:100])
+    return j
+
+
+def _brain(man: dict | None, client=None) -> list[dict]:
+    if man is None:
+        return [{"name": "brain review", "ok": False,
+                 "value": "abstain: no manifest"}]
+    try:
+        from .meta_client import MODEL_AGENT, MetaClient
+        c = client or MetaClient()
+    except KeyError:
+        return [{"name": "brain review", "ok": False,
+                 "value": "abstain: MODEL_API_KEY unset"}]
+    # NOTE: api.meta.ai returns EMPTY content when response_format is
+    # set (verified 2026-11-04), so the brain asks for bare JSON and
+    # parses defensively instead of using BRAIN_SCHEMA.
+    # NOTE 2: muse-spark-1.3 spends ~300 reasoning tokens before
+    # answering; max_tokens must leave room (finish:length otherwise).
+    msgs = [
+        {"role": "system", "content":
+         "Eres el revisor 'brain' de una fabrica de datos "
+         "cientificos (HPAI). Constitucion: rutinas van directo; "
+         "refits o degradacion de datos son criticos. Responde con "
+         "exactamente un objeto JSON y nada mas: "
+         "{\"verdict\": \"approve\"|\"reject\", \"reason\": str}."},
+        {"role": "user", "content":
+         "Manifiesto de la corrida nocturna:\n"
+         + json.dumps(man, default=str)[:4000]}]
+    last_ex: Exception | None = None
+    for _ in range(2):  # one retry on unparseable output
+        try:
+            r = c.chat(msgs, model=MODEL_AGENT, max_tokens=2000)
+            j = _parse_brain_json(r["content"])
+            return [{"name": "brain review",
+                     "ok": j["verdict"] == "approve",
+                     "value": str(j.get("reason", ""))[:200]}]
+        except Exception as ex:  # noqa: BLE001
+            last_ex = ex
+    return [{"name": "brain review", "ok": False,
+             "value": f"abstain: unparseable model output ({last_ex})"
+                      [:200]}]
+
+
+def _costo(data: Path, since_ts: float | None = None,
+           cap: float | None = None) -> list[dict]:
+    """Cost veto (G4): sum the call ledger since `since_ts` (default:
+    last 24h) and veto the whole run if spend exceeds the cap.
+    Missing ledger -> no spend happened -> ok."""
+    cap = cap if cap is not None else float(
+        os.environ.get("QA_COST_CAP_USD", "5.0"))
+    since = since_ts or (time.time() - 86400)
+    ledger = data / "agent_calls.jsonl"
+    spent = 0.0
+    n = 0
+    if ledger.exists():
+        for line in ledger.read_text().splitlines():
+            try:
+                r = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            if r.get("ts", 0) >= since:
+                spent += float(r.get("usd", 0) or 0)
+                n += 1
+    return [{"name": f"run spend <= ${cap:.2f}",
+             "ok": spent <= cap,
+             "value": f"${spent:.4f} across {n} calls"}]
+
+
+def check(serve: Path | str = "app/data", data: Path | str = "data",
+          manifest: dict | None = None) -> dict:
+    serve, data = Path(serve), Path(data)
+    reviews = {"codigo": _codigo(serve), "seguridad": _seguridad(serve, data),
+               "ux": _ux(serve), "brain": _brain(manifest)}
+    verdict = {k: all(c["ok"] for c in v) for k, v in reviews.items()}
+    cost = _costo(data)
+    cost_ok = all(c["ok"] for c in cost)
+    n_pass = sum(verdict.values())
+    hard = verdict["codigo"] and verdict["seguridad"]
+    passed = hard and n_pass >= 3 and cost_ok
+    report = {"pass": passed, "verdict": verdict,
+              "quorum": f"{n_pass}/4", "reviews": reviews,
+              "cost_veto": cost, "cost_ok": cost_ok}
+    (serve / "qa_report.json").write_text(json.dumps(report, indent=1))
+    return report
+
+
+if __name__ == "__main__":
+    import sys
+    r = check()
+    print(json.dumps(r, indent=1))
+    sys.exit(0 if r["pass"] else 1)

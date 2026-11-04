@@ -1,0 +1,139 @@
+{
+ "generated": "2026-10-28",
+ "model_cascade": {
+  "muse-spark-open": {
+   "role": "bulk extraction+triage",
+   "calls": 891,
+   "cost_usd": 0.82
+  },
+  "muse-spark-1.3": {
+   "role": "tail judge",
+   "calls": 173,
+   "cost_usd": null
+  },
+  "muse-wonder-1.0": {
+   "role": "nightly briefing",
+   "calls": null,
+   "cost_usd": null
+  },
+  "muse-glimmer": {
+   "role": "local fallback",
+   "calls": null,
+   "cost_usd": 0.0
+  }
+ },
+ "litmine": {
+  "scope": "eval corpus: 282 papers / 772 chunks / 303 YES (Oct-28 bake); full ticker: 348 papers / 3,957 chunks / 1,024 YES",
+  "papers": 282,
+  "chunks": 772,
+  "yes": 303,
+  "yes_rate": 0.38,
+  "tok_savings": 0.56,
+  "edges": 4854,
+  "cost_usd": 1.33,
+  "edges_fulltext": 740,
+  "pair_recall_gold": 0.56,
+  "precision_judge": 0.73,
+  "note": "56% pair recall vs 16% abstracts; judge-verified 100% (12/12) on human audit (raw 70% paper-claim, 60% strict-span); 2,172 edges/1,547 pairs in interactions.parquet",
+  "cost_per_edge_usd": 0.0014,
+  "cost_judge_hosted_per_edge_usd": 0.001,
+  "cost_per_edge_hosted_judge_usd": 0.0024,
+  "edges_zover": 217,
+  "verified_zover": "88/212 (42%)",
+  "precision_raw_audit": 0.7,
+  "precision_raw_audit_strict": 0.6,
+  "precision_audit_n": 30,
+  "precision_audit_criteria": "docs/audit30-criteria.md",
+  "precision_judge_verified": 1.0,
+  "judge_edge_retention": 0.55,
+  "edges_zover_full": 1116,
+  "unique_pairs": 3740,
+  "papers_mined": 139,
+  "verified": 271,
+  "verified_fulltext": "183/734 (25%)",
+  "leakage_2020plus": "1/65 pairs (2%)",
+  "heldout_pairs_clean": 64,
+  "hpai_fulltext_edges": 2682,
+  "prospective_auc_lit_labels": 0.738,
+  "lit_evidenced_hosts_heldout": 53,
+  "verified_edges": 2351,
+  "scope_triage_counts": "PMC eval corpus (282 papers / 772 chunks / 303 YES)",
+  "scope_edge_counts": "all-corpora ticker scope (348 papers / 3,957 chunks / 1,024 YES)"
+ },
+ "model": {
+  "roc_auc": 0.862,
+  "roc_sd": 0.028,
+  "pr_auc": 0.539,
+  "model": "logreg_poly2 [ext]",
+  "alt": "hgbt ext roc 0.856 pr 0.556",
+  "species": 1147,
+  "positives": 159,
+  "cv": "stratified 5-fold x20, per-source-normalized phy + is_patristic_real",
+  "winner_note": "ext feats beat base (0.862 vs 0.850); perm importance: geo 0.31 > env 0.16 > phy 0.12"
+ },
+ "decisions": {
+  "n": 173,
+  "flag_review": 49
+ },
+ "predictions_frozen": 15,
+ "supply_chain": {
+  "poultry_events": 1109,
+  "poultry_birds_affected": 82017090,
+  "egg_layer_events": 58,
+  "egg_layer_birds_affected": 60109500,
+  "commercial_events": 472,
+  "dairy_herd_events": 1031,
+  "dairy_states": 17,
+  "note": "APHIS confirmations through 2024-02; egg-layers = 73% of birds lost -> egg supply shock"
+ },
+ "interaction_model": {
+  "roc_auc_logreg": 0.715,
+  "roc_auc_sd": 0.027,
+  "pr_auc_logreg": 0.182,
+  "pairs": 6903,
+  "pos_verified": 388,
+  "features": "phylo_distance+j_geo+j_env+same_order/family/genus"
+ },
+ "provider_usage": {
+  "generated": "2026-11-04",
+  "ledger_rows": 55530,
+  "scope": "cumulative MetaClient ledger (pipeline + ops/audit traffic)",
+  "by_provider": {
+   "baseten": {
+    "calls": 20747,
+    "usd": 33.1906,
+    "models": [
+     "meta-models/muse-spark-open-1026"
+    ]
+   },
+   "fireworks": {
+    "calls": 29123,
+    "usd": 20.1676,
+    "models": [
+     "accounts/fireworks/models/muse-spark-open"
+    ]
+   },
+   "local-glimmer": {
+    "calls": 5627,
+    "usd": 0.0,
+    "models": [
+     "muse-glimmer"
+    ]
+   },
+   "meta": {
+    "calls": 33,
+    "usd": 0.36,
+    "models": [
+     "muse-spark-1.3",
+     "muse-wonder-1.0"
+    ]
+   }
+  }
+ },
+ "source_dates": {
+  "metrics_bake": "2026-10-28",
+  "litmine_bake": "2026-10-28",
+  "provider_spend": "2026-11-04",
+  "build": "2026-10-28 09:20 UTC"
+ }
+}
