@@ -14,6 +14,7 @@ status=confirmed when the edge's PMID postdates the freeze.
 import argparse
 import json
 import os
+import re
 import sys
 import time
 
@@ -44,10 +45,18 @@ def freeze() -> dict:
     return card
 
 
+def _norm_pid(v) -> str:
+    """PMID key: float-formatted ("12345.0") -> "12345"; anything else
+    keeps digits only. Same function on both sides of the join."""
+    try:
+        return str(int(float(str(v))))
+    except (ValueError, TypeError):
+        return re.sub(r"\D", "", str(v))
+
+
 def _pmid_pubdate() -> dict:
     """pmid -> publication date (YYYY-MM-DD best effort) so an edge can
     only confirm a prediction when the paper POSTDATES the freeze."""
-    import re
     import pandas as pd
     out = {}
     try:
@@ -58,13 +67,13 @@ def _pmid_pubdate() -> dict:
         for r in p.itertuples():
             d = doi2date.get(str(r.doi).strip().lower())
             if d:
-                out[re.sub(r"\D", "", str(r.pmid))] = d[:10]
+                out[_norm_pid(r.pmid)] = d[:10]
     except FileNotFoundError:
         pass
     try:
         g = pd.read_csv("data/litmine/virion_ebola_lassa_gold.csv")
         for pid_raw, yr in zip(g["PUBMED ID"], g["Year_Published"]):
-            pid = re.sub(r"\D", "", str(pid_raw))
+            pid = _norm_pid(pid_raw)
             if pid and pd.notna(yr) and pid not in out:
                 out[pid] = f"{int(yr)}-01-01"   # year-only -> Jan 1
     except FileNotFoundError:
@@ -97,7 +106,7 @@ def check(card: dict, edges_csv: str) -> dict:
                 hit = pred_species[key]
         if hit is None or hit["status"] != "awaiting-confirmation":
             continue
-        pid = str(getattr(r, "pmid", ""))
+        pid = _norm_pid(getattr(r, "pmid", ""))
         d = pubdate.get(pid)
         if d is None:
             continue          # undated paper cannot confirm a dated claim

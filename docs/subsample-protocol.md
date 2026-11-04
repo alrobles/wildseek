@@ -36,7 +36,7 @@ cheaper than campaign (fewer occ points, same M cap).
 ## Run (kuhpc)
 
 ```bash
-B=/beegfs/a474r867/meta-hack
+B=${WILDSEEK_BEEG:?set WILDSEEK_BEEG}   # staging dir on the cluster
 python3 pipeline/subsample_spec.py --pool $B/pool_flagship.csv \
   --counts data/species_cell_counts.csv --out $B/subsample_v1
 cp pipeline/subsample_run.R $B/

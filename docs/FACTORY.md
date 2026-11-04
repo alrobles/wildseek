@@ -40,7 +40,8 @@ sin HPC:
 - **BRAIN**: shift log vía modelo cloud (`MetaClient()` default),
   no `local_mi210`.
 - **PRODUCCION**: `WILDSEEK_DEPLOY=<serve-host>:<data-dir>/`
-  (hosts, paths y seed inicial en `docs/HANDOFF.md`, interno).
+  (concrete host/paths live in the devel repo only, outside
+  this snapshot).
 
 Invariantes que NINGÚN agente rompe:
 - Datos crudos nunca se editan; todo derivado es recomputable

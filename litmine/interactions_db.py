@@ -9,7 +9,7 @@ Exports to parquet for the API/UI read path.
     python litmine/interactions_db.py stats
 
 DB lives at $LITMINE_DB or data/litmine/interactions.db
-(canonical: reumanlab-terminal:/mnt/lenovo/litmine/db/interactions.db).
+(canonical path is set at deploy time via $LITMINE_DB).
 """
 import argparse
 import os

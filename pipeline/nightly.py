@@ -16,8 +16,9 @@ Casa mode (--casa / WILDSEEK_CASA=1): same conveyor, no HPC cluster.
   BUILDER   local export_serve over fresh parquets; rasters stay frozen
   APPROVER  qa.check on the local staging dir (no rsync from HPC)
   BRAIN     cloud model writes the shift log (no glimmer tunnel)
-  Seed once: rsync -a reumanlab-beta:/home/alrobles/wildseek/app/data/
-             app/data/   (the last good serve snapshot)
+  Seed once: rsync -a <serve-host>:<data-dir>/ app/data/
+             (the last good serve snapshot; concrete values are
+             devel-only, see internal handoff)
 
 Usage:  python pipeline/nightly.py           # full run (HPC)
         python pipeline/nightly.py --casa    # full run, no cluster
@@ -26,8 +27,7 @@ Cron:   15 3 * * * cd <repo> && WILDSEEK_CASA=1 WILDSEEK_DEPLOY=... \\
             MODEL_API_KEY=... .venv/bin/python pipeline/nightly.py
 
 Env: WILDSEEK_BEEG    staging dir on the HPC cluster (HPC mode only)
-     WILDSEEK_DEPLOY  rsync target  host:dir/  for serve_data (required);
-                      casa: reumanlab-beta:/home/alrobles/wildseek/app/data/
+     WILDSEEK_DEPLOY  rsync target  host:dir/  for serve_data (required)
      WILDSEEK_KUHPC   ssh alias for the cluster (default "kuhpc")
      WILDSEEK_CASA=1  casa mode (same as --casa)
      WILDSEEK_SELFHEAL=1 allow `muse exec --yolo` self-heal (default off)
@@ -197,9 +197,8 @@ def builder_casa(man):
     seed = ROOT / "app/data"
     if not (seed / "meta.json").exists():
         raise RuntimeError(
-            "no local serve snapshot to build on (casa mode): seed it with "
-            "rsync -a reumanlab-beta:/home/alrobles/wildseek/app/data/ "
-            "app/data/")
+            "no local serve snapshot to build on (casa mode): seed "
+            "app/data/ from the last good serve snapshot, then re-run")
     stg = ROOT / "data/stage_serve"
     stg.mkdir(parents=True, exist_ok=True)
     sh(f"rsync -a --delete {seed}/ {stg}/", timeout=900)
