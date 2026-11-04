@@ -19,10 +19,29 @@ import duckdb
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
+from starlette.middleware.gzip import GZipMiddleware
 
 DATA = Path(os.environ.get("DATA_DIR", "app/data"))
 
 app = FastAPI(title="WildSeek", version="0.1.0")
+
+
+class _NoPathsend:
+    # Uvicorn's httptools impl negotiates http.response.pathsend (sendfile);
+    # those bodies bypass response middleware entirely, so the 18 MB
+    # flyways.geojson would stay uncompressed on prod. Strip the extension
+    # and FileResponse falls back to chunked sends, which gzip sees.
+    def __init__(self, app):
+        self.app = app
+
+    async def __call__(self, scope, receive, send):
+        if scope["type"] == "http":
+            scope.get("extensions", {}).pop("http.response.pathsend", None)
+        await self.app(scope, receive, send)
+
+
+app.add_middleware(GZipMiddleware, minimum_size=1024, compresslevel=6)
+app.add_middleware(_NoPathsend)
 
 
 def q(sql: str) -> list[dict]:
