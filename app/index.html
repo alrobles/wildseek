@@ -185,6 +185,12 @@
     </label>
   </div>
   <div class="layer">
+    <label title="Kernel-smoothed historical HPAI detection density across CONUS — the detection term of the surveillance priority raster">
+      <input type="checkbox" id="ckDetDen">
+      detection density (kernel)
+    </label>
+  </div>
+  <div class="layer">
     <label title="Modeled ecological reservoir host community raster">
       <input type="checkbox" id="ckRsv">
       reservoir community
@@ -264,6 +270,11 @@
       <div class="legend-labels"><span>Low</span><span>Moderate</span><span>High</span></div>
     </div>
     <div class="legend-row">
+      <div class="legend-title" title="Kernel density of historical wild-bird HPAI detections (inferno ramp)">Detection Density</div>
+      <div class="legend-bar" style="background:linear-gradient(90deg, #000004, #56106e, #bb3754, #f98c0a, #fcffa4);"></div>
+      <div class="legend-labels"><span>Sparse</span><span>Hotspot</span></div>
+    </div>
+    <div class="legend-row">
       <div class="legend-title" title="Normalized county-level exposure based on poultry inventory and flock events">County Exposure</div>
       <div class="legend-bar" style="background:linear-gradient(90deg, #fee8c8, #fdbb84, #e34a33);"></div>
       <div class="legend-labels"><span>0.0</span><span>0.5</span><span>&ge; 1.0</span></div>
@@ -331,6 +342,15 @@ async function load() {
       }
     } else {
       const ck = document.getElementById("ckRisk");
+      if (ck) ck.disabled = true;
+    }
+    if (META.risk_detect_png && META.risk_detect_bbox) {
+      map.addSource("detDen", {type:"image", url: SRC+META.risk_detect_png, coordinates: META.risk_detect_bbox});
+      map.addLayer({id:"detDen", type:"raster", source:"detDen",
+        layout:{visibility:"none"},
+        paint:{"raster-opacity":0.6}}, "ctyFill");
+    } else {
+      const ck = document.getElementById("ckDetDen");
       if (ck) ck.disabled = true;
     }
     setRsv(document.getElementById("rsvMode")?.value || "sum");
@@ -652,6 +672,7 @@ async function load() {
     };
   };
   vis("riskFill","ckRisk");
+  vis("detDen","ckDetDen");
   vis("ctyFill","ckCty");
   vis("rsv","ckRsv");
   vis("detPt","ckDet");
