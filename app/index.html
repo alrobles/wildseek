@@ -267,7 +267,7 @@
     <div id="ccBody" style="margin-top:4px" class="tabular"></div>
   </div>
 
-  <details style="margin-top:10px;">
+  <details id="spDetails" style="margin-top:10px;">
     <summary id="spHead">species drill-down</summary>
     <select id="spSel" aria-label="Species drill-down selector"><option value="">— pick species —</option></select>
     <div class="stat tabular" id="sel"></div>
@@ -427,10 +427,7 @@ async function load() {
       paint:{"fill-color":"#58a6ff","fill-opacity":0.10}});
   });
 
-  map.addSource("det", {type:"geojson", data: SRC+"detections.geojson"});
-  map.addLayer({id:"detPt", type:"circle", source:"det",
-    layout:{visibility:"none"},
-    paint:{"circle-radius":2.5,"circle-color":"#f781bf","circle-opacity":0.6}});
+  // detections stay lazy — ensureDet() creates source+layer on first enable (~2.2 MB off first paint)
 
   // poultry/flock stays lazy — ensureFlock() creates it on first enable
 
@@ -666,9 +663,15 @@ async function load() {
     }).catch(() => {
       const dStat = document.getElementById("dstat");
       if (dStat) dStat.textContent = "decision delta unavailable";
-    }),
+    })
+  ]);
 
-    // Species drill-down dropdown
+  // Species drill-down data stays lazy — ~650 kB held until the section is opened
+  const spDetails = document.getElementById("spDetails");
+  let spRequested = false;
+  if (spDetails) spDetails.addEventListener("toggle", () => {
+    if (!spDetails.open || spRequested) return;
+    spRequested = true;
     fetch("/species?limit=1200").then(r=>r.json()).then(sp => {
       const sel = document.getElementById("spSel");
       const head = document.getElementById("spHead");
@@ -683,17 +686,16 @@ async function load() {
         sel.onchange = () => handleSpeciesSelect(sp, sel.value);
       }
     }).catch(() => {
+      spRequested = false;
       const head = document.getElementById("spHead");
       if (head) head.textContent = "species drill-down (unavailable)";
-    }),
-
-    // Susceptibility distribution (fetch top=1000 once)
+    });
     fetch("/susceptibility?top=1000").then(r=>r.json()).then(sus => {
       if (Array.isArray(sus) && sus.length > 0) {
         renderSusDistribution(sus);
       }
-    }).catch(() => {})
-  ]);
+    }).catch(() => {});
+  });
 
   // Reservoir raster changer — fetches only while the layer is enabled
   function setRsv(mode) {
@@ -718,6 +720,17 @@ async function load() {
     map.addLayer({id:"detDen", type:"raster", source:"detDen",
       layout:{visibility:"visible"},
       paint:{"raster-opacity":0.6}}, "ctyFill");
+  }
+  function ensureDet() {
+    if (map.getSource("det")) return;
+    map.addSource("det", {type:"geojson", data: SRC+"detections.geojson"});
+    map.addLayer({id:"detPt", type:"circle", source:"det",
+      layout:{visibility:"visible"},
+      paint:{"circle-radius":2.5,"circle-color":"#f781bf","circle-opacity":0.6}});
+    const yr = document.getElementById("detYear")?.value || "2026";
+    map.setFilter("detPt", ["<=",["get","year"],["to-number", yr]]);
+    map.on("mousemove", "detPt", () => { map.getCanvas().style.cursor = "pointer"; });
+    map.on("mouseleave", "detPt", () => { map.getCanvas().style.cursor = ""; });
   }
   function ensureFlock() {
     if (map.getSource("flock")) return;
@@ -754,7 +767,7 @@ async function load() {
   };
   vis("riskFill","ckRisk");
   vis("ctyFill","ckCty");
-  vis("detPt","ckDet");
+  lazyVis("ckDet","detPt", ensureDet);
   vis("flyLine","ckFly");
   lazyVis("ckDetDen","detDen", ensureDetDen);
   lazyVis("ckRsv","rsv", () => setRsv(rsvModeSel?.value || "sum"));
@@ -796,7 +809,7 @@ async function load() {
   });
 
   // Pointer cursor over inspectable map features
-  ["detPt","ctyFill"].forEach(id => {
+  ["ctyFill"].forEach(id => {
     map.on("mousemove", id, () => { map.getCanvas().style.cursor = "pointer"; });
     map.on("mouseleave", id, () => { map.getCanvas().style.cursor = ""; });
   });
@@ -807,7 +820,7 @@ async function load() {
     if (!card) return;
 
     // Check det point layer
-    const det = map.queryRenderedFeatures(e.point, {layers:["detPt"]})[0];
+    const det = map.getLayer("detPt") ? map.queryRenderedFeatures(e.point, {layers:["detPt"]})[0] : null;
     if (det) {
       const p = det.properties;
       showClickCard();
