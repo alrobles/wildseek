@@ -248,7 +248,9 @@ async function load() {
         `${(m.supply_chain.egg_layer_birds_affected/1e6).toFixed(0)}M` +
         ` egg-layer birds lost (${m.supply_chain.egg_layer_events} events)` +
         ` · ${m.supply_chain.dairy_herd_events} dairy herds in ` +
-        `${m.supply_chain.dairy_states} states (APHIS)</span>` : "");
+        `${m.supply_chain.dairy_states} states (APHIS)</span>` : "") +
+      `<br><span class="badge">NEW Glimmer triage LoRA</span> ` +
+      `<span class="sub">hold-out exact-match 0.0 → 0.70 (Fireworks)</span>`;
   } catch(e) { document.getElementById("mxlist").textContent =
     "metrics unavailable"; }
 
@@ -266,8 +268,9 @@ async function load() {
         const p = r.parasite || r.para_texts || "?";
         const h = r.host || r.host_texts || "?";
         const v = String(r.verified).toLowerCase()==="true" ? "✓ " : "";
-        return `<a href="https://pubmed.ncbi.nlm.nih.gov/${r.pmid}/" ` +
-          `target="_blank" style="color:#58a6ff">PMID ${r.pmid}</a> ` +
+        const pmid = encodeURIComponent(String(r.pmid ?? ""));
+        return `<a href="https://pubmed.ncbi.nlm.nih.gov/${pmid}/" ` +
+          `target="_blank" style="color:#58a6ff">PMID ${esc(r.pmid)}</a> ` +
           `<span style="color:#3fb950">${v}</span>` +
           `${esc(p)} → ${esc(h)} <span class="sub">${esc(r.relation)}` +
           (r.evidence_span ? ` · “${esc(String(r.evidence_span).slice(0,80))}”` : "") +
@@ -284,7 +287,7 @@ async function load() {
       `predicted <b>${esc(w.predicted_on)}</b> — top unlabeled species ` +
       `by P(host). confirmed by a post-freeze PMID: <b>${conf}</b><br>` +
       w.predictions.map(p =>
-        `${esc(p.species)} · ${p.p_host.toFixed(2)} ` +
+        `${esc(p.species)} · ${Number(p.p_host).toFixed(2)} ` +
         `<span class="sub">${p.status==="confirmed" ? "✓ confirmed" :
           esc(p.status)}</span>`).join("<br>");
   } catch(e) { document.getElementById("wcilist").textContent =
@@ -424,14 +427,6 @@ async function explainWatershed(huc) {
   }
 }
 map.on("load", load);
-  // static model cascade badges (baked strings)
-  document.getElementById("mxlist").innerHTML = `
-    <span class="badge">spark-1.3 triage</span>
-    <span class="badge">wonder briefing</span>
-    <span class="badge">contributor extraction</span>
-    <span class="badge">spark-open judge</span>
-    <span class="badge">NEW Glimmer triage LoRA (hold-out exact-match 0.0 to 0.70)</span>`;
-
 </script>
 <footer style="position:fixed;bottom:0;left:0;right:0;padding:4px 10px;
  font:11px/1.4 sans-serif;color:#888;background:#ffffffee;z-index:1000;
