@@ -344,16 +344,15 @@ async function load() {
       const ck = document.getElementById("ckRisk");
       if (ck) ck.disabled = true;
     }
-    if (META.risk_detect_png && META.risk_detect_bbox) {
-      map.addSource("detDen", {type:"image", url: SRC+META.risk_detect_png, coordinates: META.risk_detect_bbox});
-      map.addLayer({id:"detDen", type:"raster", source:"detDen",
-        layout:{visibility:"none"},
-        paint:{"raster-opacity":0.6}}, "ctyFill");
-    } else {
+    // detDen + reservoir rasters stay lazy — created on first layer enable
+    if (!(META.risk_detect_png && META.risk_detect_bbox)) {
       const ck = document.getElementById("ckDetDen");
       if (ck) ck.disabled = true;
     }
-    setRsv(document.getElementById("rsvMode")?.value || "sum");
+    if (!META.suit_bbox) {
+      const ck = document.getElementById("ckRsv");
+      if (ck) ck.disabled = true;
+    }
     return meta;
   }).catch(err => {
     console.error("meta error", err);
@@ -371,22 +370,21 @@ async function load() {
       "fill-opacity":0.45,
       "fill-outline-color":"#e34a3388"}});
 
-  map.addSource("fly", {type:"geojson", data: SRC+"flyways.geojson"});
-  map.addLayer({id:"flyLine", type:"fill", source:"fly",
-    paint:{"fill-color":"#58a6ff","fill-opacity":0.10}});
+  // Flyways are ~18 MB — defer the fetch until first idle so core layers paint first
+  map.once("idle", () => {
+    if (map.getSource("fly")) return;
+    map.addSource("fly", {type:"geojson", data: SRC+"flyways.geojson"});
+    map.addLayer({id:"flyLine", type:"fill", source:"fly",
+      layout:{visibility: document.getElementById("ckFly")?.checked ? "visible" : "none"},
+      paint:{"fill-color":"#58a6ff","fill-opacity":0.10}});
+  });
 
   map.addSource("det", {type:"geojson", data: SRC+"detections.geojson"});
   map.addLayer({id:"detPt", type:"circle", source:"det",
     layout:{visibility:"none"},
     paint:{"circle-radius":2.5,"circle-color":"#f781bf","circle-opacity":0.6}});
 
-  map.addSource("flock", {type:"geojson", data: SRC+"poultry.geojson"});
-  map.addLayer({id:"flockPt", type:"circle", source:"flock",
-    layout:{visibility:"none"},
-    paint:{"circle-radius":["interpolate",["linear"],["get","birds_affected"],
-        0,3, 100000,8, 500000,14],
-      "circle-color":"#f78166","circle-opacity":0.7,
-      "circle-stroke-color":"#fff3","circle-stroke-width":1}});
+  // poultry/flock stays lazy — ensureFlock() creates it on first enable
 
   // Cache state bboxes from cty geojson for instant flyTo
   map.on("data", e => {
@@ -647,7 +645,7 @@ async function load() {
     }).catch(() => {})
   ]);
 
-  // Reservoir raster changer
+  // Reservoir raster changer — fetches only while the layer is enabled
   function setRsv(mode) {
     if (map.getLayer("rsv")) map.removeLayer("rsv");
     if (map.getSource("rsv")) map.removeSource("rsv");
@@ -659,9 +657,32 @@ async function load() {
       paint:{"raster-opacity":0.65}}, "ctyFill");
   }
   const rsvModeSel = document.getElementById("rsvMode");
-  if (rsvModeSel) rsvModeSel.onchange = e => setRsv(e.target.value);
+  if (rsvModeSel) rsvModeSel.onchange = e => {
+    if (document.getElementById("ckRsv")?.checked) setRsv(e.target.value);
+  };
 
-  // Layer visibility bindings
+  // Lazy layer factories — hidden layers cost ~11 MB; create on first enable
+  function ensureDetDen() {
+    if (map.getSource("detDen") || !(META.risk_detect_png && META.risk_detect_bbox)) return;
+    map.addSource("detDen", {type:"image", url: SRC+META.risk_detect_png, coordinates: META.risk_detect_bbox});
+    map.addLayer({id:"detDen", type:"raster", source:"detDen",
+      layout:{visibility:"visible"},
+      paint:{"raster-opacity":0.6}}, "ctyFill");
+  }
+  function ensureFlock() {
+    if (map.getSource("flock")) return;
+    map.addSource("flock", {type:"geojson", data: SRC+"poultry.geojson"});
+    map.addLayer({id:"flockPt", type:"circle", source:"flock",
+      layout:{visibility:"visible"},
+      paint:{"circle-radius":["interpolate",["linear"],["get","birds_affected"],
+          0,3, 100000,8, 500000,14],
+        "circle-color":"#f78166","circle-opacity":0.7,
+        "circle-stroke-color":"#fff3","circle-stroke-width":1}});
+    map.on("mousemove", "flockPt", () => { map.getCanvas().style.cursor = "pointer"; });
+    map.on("mouseleave", "flockPt", () => { map.getCanvas().style.cursor = ""; });
+  }
+
+  // Layer visibility bindings — lazy layers ensure their source on first enable
   const vis = (id, ck) => {
     const el = document.getElementById(ck);
     if (!el) return;
@@ -671,13 +692,23 @@ async function load() {
       }
     };
   };
+  const lazyVis = (ck, id, ensure) => {
+    const el = document.getElementById(ck);
+    if (!el) return;
+    el.onchange = e => {
+      if (e.target.checked) ensure();
+      if (map.getLayer(id)) {
+        map.setLayoutProperty(id, "visibility", e.target.checked ? "visible" : "none");
+      }
+    };
+  };
   vis("riskFill","ckRisk");
-  vis("detDen","ckDetDen");
   vis("ctyFill","ckCty");
-  vis("rsv","ckRsv");
   vis("detPt","ckDet");
-  vis("flockPt","ckFlock");
   vis("flyLine","ckFly");
+  lazyVis("ckDetDen","detDen", ensureDetDen);
+  lazyVis("ckRsv","rsv", () => setRsv(rsvModeSel?.value || "sum"));
+  lazyVis("ckFlock","flockPt", ensureFlock);
 
   // County paint toggle (poultry vs dairy exposure)
   const ctyPaint = v => ["interpolate",["linear"],["get",v], 0,"#fee8c8", 1,"#e34a33"];
@@ -721,7 +752,7 @@ async function load() {
   });
 
   // Pointer cursor over inspectable map features
-  ["detPt","ctyFill","flockPt"].forEach(id => {
+  ["detPt","ctyFill"].forEach(id => {
     map.on("mousemove", id, () => { map.getCanvas().style.cursor = "pointer"; });
     map.on("mouseleave", id, () => { map.getCanvas().style.cursor = ""; });
   });
@@ -757,7 +788,7 @@ async function load() {
     }
 
     // Check flock point layer
-    const flock = map.queryRenderedFeatures(e.point, {layers:["flockPt"]})[0];
+    const flock = map.getLayer("flockPt") ? map.queryRenderedFeatures(e.point, {layers:["flockPt"]})[0] : null;
     if (flock) {
       const p = flock.properties;
       showClickCard();
