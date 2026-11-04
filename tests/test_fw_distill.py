@@ -71,6 +71,43 @@ def test_check_flags_wrong_paired(tmp_path):
     assert any("paired" in e for e in errs)
 
 
+def test_field_accuracy_per_key_denominator(tmp_path):
+    # variable-schema holdout ("all" orchestrator): a field's accuracy is
+    # over rows whose gold carried the key, not all rows — mirrors the
+    # wildseek-all run where relevant x/14 and decision x/24 coexist.
+    base = [_row(0, False, {"relevant": False}),
+            _row(1, False, {"relevant": True}),
+            _row(2, False, {"decision": False}),
+            _row(3, False, {"decision": False})]
+    tuned = [_row(i, True, f) for i, f in enumerate(
+        [{"relevant": True}, {"relevant": True},
+         {"decision": True}, {"decision": True}])]
+    for name, rows in (("base", base), ("tuned", tuned)):
+        (tmp_path / f"predictions_{name}.jsonl").write_text(
+            "\n".join(json.dumps(r) for r in rows))
+    (tmp_path / "holdout.jsonl").write_text("\n".join("{}" for _ in base))
+    (tmp_path / "metrics.jsonl").write_text('{"step": 1}')
+    summary = {
+        "steps": 1,
+        "base": {"label": "base", "exact_match": 0.0, "unterminated": 0,
+                 "prompt_tokens": 1, "sampled_tokens": 1,
+                 "field_accuracy": {"relevant": 0.5, "decision": 0.0}},
+        "tuned": {"label": "tuned", "exact_match": 1.0, "unterminated": 0,
+                  "prompt_tokens": 1, "sampled_tokens": 1,
+                  "field_accuracy": {"relevant": 1.0, "decision": 1.0}},
+        "exact_match_delta": 1.0,
+        "paired": {"only_tuned_correct": 4, "only_base_correct": 0,
+                   "p_value": fd.mcnemar_p(0, 4)},
+        "session": "ts-x", "log": "muse_starter_logs/test",
+    }
+    (tmp_path / "summary.json").write_text(json.dumps(summary))
+    assert fd.check(tmp_path) == []
+    # an n-denominator summary (relevant 1/4) must fail closed
+    summary["base"]["field_accuracy"]["relevant"] = 0.25
+    (tmp_path / "summary.json").write_text(json.dumps(summary))
+    assert any("relevant" in e for e in fd.check(tmp_path))
+
+
 def test_mcnemar_matches_triage_reference():
     # triage run: 28-0 discordant -> 2 * (1/2)^28 = 7.45e-9
     assert fd.mcnemar_p(0, 28) == 7.450580596923828e-09

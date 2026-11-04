@@ -40,15 +40,20 @@ def mcnemar_p(only_a: int, only_b: int) -> float:
 
 
 def recompute(preds: list[dict]) -> dict:
-    fields: dict[str, int] = {}
+    # _score keys each row's fields by gold keys, so a field's denominator
+    # is the rows whose gold carried it — not all rows (variable-schema
+    # holdouts like the "all" orchestrator set depend on this).
+    seen: dict[str, int] = {}
+    hits: dict[str, int] = {}
     for p in preds:
         for k, v in p["fields"].items():
-            fields[k] = fields.get(k, 0) + int(bool(v))
+            seen[k] = seen.get(k, 0) + 1
+            hits[k] = hits.get(k, 0) + int(bool(v))
     n = len(preds)
     return {
         "exact_match": sum(p["exact"] for p in preds) / n,
         "unterminated": sum(p["truncated"] for p in preds),
-        "field_accuracy": {k: v / n for k, v in fields.items()},
+        "field_accuracy": {k: hits[k] / seen[k] for k in seen},
     }
 
 

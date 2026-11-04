@@ -1,0 +1,52 @@
+{
+  "steps": 120,
+  "base": {
+    "label": "base",
+    "exact_match": 0.0,
+    "unterminated": 3,
+    "prompt_tokens": 17542,
+    "sampled_tokens": 27146,
+    "field_accuracy": {
+      "relevant": 0.7142857142857143,
+      "hosts": 0.0,
+      "parasites": 0.0,
+      "decision": 0.0,
+      "switch_to": 0.0,
+      "reason": 0.0,
+      "confidence": 0.0
+    }
+  },
+  "tuned": {
+    "label": "tuned",
+    "exact_match": 0.2,
+    "unterminated": 2,
+    "prompt_tokens": 17542,
+    "sampled_tokens": 5721,
+    "field_accuracy": {
+      "relevant": 0.7142857142857143,
+      "hosts": 0.5714285714285714,
+      "parasites": 0.5714285714285714,
+      "decision": 1.0,
+      "switch_to": 1.0,
+      "reason": 0.0,
+      "confidence": 1.0
+    }
+  },
+  "promoted_model": "accounts/alrobles/models/muse-starter-sl-wildseek-all-20261104-0017",
+  "exact_match_delta": 0.2,
+  "paired": {
+    "only_tuned_correct": 8,
+    "only_base_correct": 0,
+    "p_value": 0.0078125
+  },
+  "session": "ts-bdd81a10708b45fbb689c46b00ef8e85",
+  "log": "muse_starter_logs/wildseek-all-20261104-0017",
+  "cost": {
+    "training": "$0 (promotional)",
+    "evaluation_sampling": {
+      "prompt_tokens": 35084,
+      "sampled_tokens": 32867,
+      "note": "billed separately from training at published per-token rates"
+    }
+  }
+}
