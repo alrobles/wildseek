@@ -83,6 +83,7 @@
               color:var(--text-muted); font-size:13px; cursor:pointer; padding:1px 6px;
               border-radius:4px; line-height:1; }
   .cc-close:hover { color:var(--text-main); background:var(--bg-card-hover); border-color:var(--border-subtle); }
+  .cc-close:focus-visible { outline:1px solid var(--accent-blue); outline-offset:-1px; }
 
   /* Lists & Buttons */
   .more-btn { background:var(--border-dim); color:var(--text-muted); border:1px solid var(--border-subtle);
@@ -251,7 +252,7 @@
     </label>
   </div>
 
-  <div class="card" id="clickcard" style="display:none">
+  <div class="card" id="clickcard" style="display:none" role="region" aria-labelledby="ccTitle" aria-live="polite">
     <button type="button" id="ccClose" class="cc-close" title="Dismiss (Esc)" aria-label="Dismiss inspection card">&times;</button>
     <h3 id="ccTitle"></h3>
     <div class="sub" id="ccSub"></div>
@@ -328,6 +329,26 @@ map.addControl(new maplibregl.NavigationControl());
 let META = {};
 let STATE_BBOXES = {};
 const REDUCED_MOTION = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+// Clickcard focus management: keyboard opens move focus to the dismiss
+// control; any dismiss restores focus to the invoking element.
+let ccKeyboard = false, ccReturnTo = null;
+document.addEventListener("keydown", () => { ccKeyboard = true; }, true);
+document.addEventListener("pointerdown", () => { ccKeyboard = false; }, true);
+const ccOpen = card => {
+  if (!card) return;
+  const ae = document.activeElement;
+  if (ae && !card.contains(ae)) ccReturnTo = ae !== document.body ? ae : null;
+  card.style.display = "block";
+  card.scrollIntoView({block:"nearest", behavior: REDUCED_MOTION ? "auto" : "smooth"});
+  if (ccKeyboard) { const x = document.getElementById("ccClose"); if (x) x.focus({preventScroll:true}); }
+};
+const ccDismiss = card => {
+  if (card) card.style.display = "none";
+  document.querySelectorAll(".wsrow.active").forEach(a => { a.classList.remove("active"); a.setAttribute("aria-pressed", "false"); });
+  if (ccReturnTo && ccReturnTo.isConnected) ccReturnTo.focus({preventScroll:true});
+  ccReturnTo = null;
+};
 
 // Parallel initial loader
 async function load() {
@@ -471,9 +492,11 @@ async function load() {
       wl.querySelectorAll(".wsrow").forEach(el => {
         el.tabIndex = 0;
         el.setAttribute("role", "button");
+        el.setAttribute("aria-pressed", "false");
         const pick = () => {
-          wl.querySelectorAll(".wsrow.active").forEach(a => a.classList.remove("active"));
+          wl.querySelectorAll(".wsrow.active").forEach(a => { a.classList.remove("active"); a.setAttribute("aria-pressed", "false"); });
           el.classList.add("active");
+          el.setAttribute("aria-pressed", "true");
           explainWatershed(el.dataset.huc, el.dataset.states);
         };
         el.onclick = pick;
@@ -756,15 +779,8 @@ async function load() {
 
   // Clickcard show/dismiss helpers (Esc or × clears card + watershed selection)
   const clickCard = document.getElementById("clickcard");
-  const showClickCard = () => {
-    if (!clickCard) return;
-    clickCard.style.display = "block";
-    clickCard.scrollIntoView({block:"nearest", behavior: REDUCED_MOTION ? "auto" : "smooth"});
-  };
-  const hideClickCard = () => {
-    if (clickCard) clickCard.style.display = "none";
-    document.querySelectorAll(".wsrow.active").forEach(a => a.classList.remove("active"));
-  };
+  const showClickCard = () => ccOpen(clickCard);
+  const hideClickCard = () => ccDismiss(clickCard);
   const ccCloseBtn = document.getElementById("ccClose");
   if (ccCloseBtn) ccCloseBtn.onclick = hideClickCard;
   document.addEventListener("keydown", e => {
@@ -830,7 +846,7 @@ async function load() {
       document.getElementById("ccSub").textContent = "Enable a layer to inspect (detections, exposure, or flocks)";
       document.getElementById("ccBody").textContent = "";
     } else {
-      card.style.display = "none";
+      ccDismiss(card);
     }
   });
 }
@@ -1001,8 +1017,7 @@ async function explainWatershed(huc, statesStr) {
 
   const card = document.getElementById("clickcard");
   if (!card) return;
-  card.style.display = "block";
-  card.scrollIntoView({block:"nearest", behavior: REDUCED_MOTION ? "auto" : "smooth"});
+  ccOpen(card);
   document.getElementById("ccTitle").textContent = "loading…";
   document.getElementById("ccSub").textContent = "";
   document.getElementById("ccBody").innerHTML = "";
