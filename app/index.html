@@ -142,6 +142,7 @@
 </head>
 <body>
 <div id="map"></div>
+<noscript><div style="position:fixed;top:12px;right:12px;z-index:20;max-width:280px;background:#161b22;border:1px solid #30363d;border-radius:6px;padding:8px 10px;font-size:11px;color:#8b949e;">JavaScript is required — map and live panels are disabled.</div></noscript>
 <div id="panel">
   <h1>WildSeek — HPAI Monitor <span id="healthdot" title="Live API health status (/health)" role="status" aria-label="API health unknown" style="display:inline-block;width:8px;height:8px;background:#888;border-radius:50%;margin-left:6px;vertical-align:middle;"></span></h1>
   <div class="stat">Ecological surveillance for wildlife professionals — not medical advice.</div>
@@ -327,16 +328,30 @@ const SRC = "data/";
 const esc = s => String(s ?? "").replace(/[&<>"']/g,
   c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 
-const map = new maplibregl.Map({
-  container: "map",
-  style: { version: 8,
-    sources: { osm: { type:"raster", tileSize:256,
-      tiles:["https://tile.openstreetmap.org/{z}/{x}/{y}.png"],
-      attribution:"© OSM" }},
-    layers: [{ id:"osm", type:"raster", source:"osm" }] },
-  center: [-98, 39], zoom: 4
-});
-map.addControl(new maplibregl.NavigationControl());
+// Map init is best-effort: a unpkg CDN outage or missing WebGL must
+// not take down the live data panels (they run map-less below).
+let map = null;
+try {
+  if (window.maplibregl) {
+    map = new maplibregl.Map({
+      container: "map",
+      style: { version: 8,
+        sources: { osm: { type:"raster", tileSize:256,
+          tiles:["https://tile.openstreetmap.org/{z}/{x}/{y}.png"],
+          attribution:"© OSM" }},
+        layers: [{ id:"osm", type:"raster", source:"osm" }] },
+      center: [-98, 39], zoom: 4
+    });
+    map.addControl(new maplibregl.NavigationControl());
+  }
+} catch (err) { console.error("map init failed", err); map = null; }
+if (!map) {
+  const mp = document.getElementById("map");
+  if (mp) mp.innerHTML = '<div style="position:absolute;top:12px;right:12px;max-width:280px;background:#161b22;border:1px solid #30363d;border-radius:6px;padding:8px 10px;font-size:11px;color:#8b949e;">basemap unavailable — map library (CDN/WebGL) failed to load; live panels still work</div>';
+  ["ckRisk","ckDetDen","ckRsv","ckCty","ckDet","ckFlock","ckFly","rsvMode","ctyMode","detYear"].forEach(id => {
+    const el = document.getElementById(id); if (el) el.disabled = true;
+  });
+}
 
 let META = {};
 let STATE_BBOXES = {};
@@ -386,7 +401,7 @@ async function load() {
     if (metaEl) {
       metaEl.textContent = `${META.n_species ?? "?"} spp modelled · ${META.n_detections ?? "?"} HPAI detections · built ${META.built ?? ""}`;
     }
-    if (META.risk_png && META.risk_bbox) {
+    if (map && META.risk_png && META.risk_bbox) {
       if (!map.getSource("risk")) {
         map.addSource("risk", {type:"image", url: SRC+META.risk_png, coordinates: META.risk_bbox});
         map.addLayer({id:"riskFill", type:"raster", source:"risk", paint:{"raster-opacity":0.7}});
@@ -415,8 +430,8 @@ async function load() {
   });
 
   // Setup static map sources
-  map.addSource("cty", {type:"geojson", data: SRC+"county_exposure.geojson"});
-  map.addLayer({id:"ctyFill", type:"fill", source:"cty",
+  if (map) map.addSource("cty", {type:"geojson", data: SRC+"county_exposure.geojson"});
+  if (map) map.addLayer({id:"ctyFill", type:"fill", source:"cty",
     layout:{visibility:"none"},
     paint:{"fill-color":["interpolate",["linear"],["get","exposure"],
         0,"#fee8c8", 1,"#e34a33"],
@@ -424,7 +439,7 @@ async function load() {
       "fill-outline-color":"#e34a3388"}});
 
   // Flyways are ~18 MB — defer the fetch until first idle so core layers paint first
-  map.once("idle", () => {
+  if (map) map.once("idle", () => {
     if (map.getSource("fly")) return;
     map.addSource("fly", {type:"geojson", data: SRC+"flyways.geojson"});
     map.addLayer({id:"flyLine", type:"fill", source:"fly",
@@ -437,7 +452,7 @@ async function load() {
   // poultry/flock stays lazy — ensureFlock() creates it on first enable
 
   // Cache state bboxes from cty geojson for instant flyTo
-  map.on("data", e => {
+  if (map) map.on("data", e => {
     if (e.sourceId === "cty" && e.isSourceLoaded && Object.keys(STATE_BBOXES).length === 0) {
       try {
         const feats = map.querySourceFeatures("cty");
@@ -464,7 +479,7 @@ async function load() {
 
   // Sparkline generator for detections
   let sparklineDrawn = false;
-  map.on("data", e => {
+  if (map) map.on("data", e => {
     if (e.sourceId === "det" && e.isSourceLoaded && !sparklineDrawn) {
       try {
         const feats = map.querySourceFeatures("det");
@@ -704,6 +719,7 @@ async function load() {
 
   // Reservoir raster changer — fetches only while the layer is enabled
   function setRsv(mode) {
+    if (!map) return;
     if (map.getLayer("rsv")) map.removeLayer("rsv");
     if (map.getSource("rsv")) map.removeSource("rsv");
     if (!META.suit_bbox) return;
@@ -720,14 +736,14 @@ async function load() {
 
   // Lazy layer factories — hidden layers cost ~11 MB; create on first enable
   function ensureDetDen() {
-    if (map.getSource("detDen") || !(META.risk_detect_png && META.risk_detect_bbox)) return;
+    if (!map || map.getSource("detDen") || !(META.risk_detect_png && META.risk_detect_bbox)) return;
     map.addSource("detDen", {type:"image", url: SRC+META.risk_detect_png, coordinates: META.risk_detect_bbox});
     map.addLayer({id:"detDen", type:"raster", source:"detDen",
       layout:{visibility:"visible"},
       paint:{"raster-opacity":0.6}}, "ctyFill");
   }
   function ensureDet() {
-    if (map.getSource("det")) return;
+    if (!map || map.getSource("det")) return;
     map.addSource("det", {type:"geojson", data: SRC+"detections.geojson"});
     map.addLayer({id:"detPt", type:"circle", source:"det",
       layout:{visibility:"visible"},
@@ -738,7 +754,7 @@ async function load() {
     map.on("mouseleave", "detPt", () => { map.getCanvas().style.cursor = ""; });
   }
   function ensureFlock() {
-    if (map.getSource("flock")) return;
+    if (!map || map.getSource("flock")) return;
     map.addSource("flock", {type:"geojson", data: SRC+"poultry.geojson"});
     map.addLayer({id:"flockPt", type:"circle", source:"flock",
       layout:{visibility:"visible"},
@@ -755,6 +771,7 @@ async function load() {
     const el = document.getElementById(ck);
     if (!el) return;
     el.onchange = e => {
+      if (!map) return;
       if (map.getLayer(id)) {
         map.setLayoutProperty(id, "visibility", e.target.checked ? "visible" : "none");
       }
@@ -764,6 +781,7 @@ async function load() {
     const el = document.getElementById(ck);
     if (!el) return;
     el.onchange = e => {
+      if (!map) return;
       if (e.target.checked) ensure();
       if (map.getLayer(id)) {
         map.setLayoutProperty(id, "visibility", e.target.checked ? "visible" : "none");
@@ -783,6 +801,7 @@ async function load() {
   const ctyModeSel = document.getElementById("ctyMode");
   if (ctyModeSel) {
     ctyModeSel.onchange = e => {
+      if (!map) return;
       if (map.getLayer("ctyFill")) {
         map.setPaintProperty("ctyFill", "fill-color", ctyPaint(e.target.value));
       }
@@ -797,7 +816,7 @@ async function load() {
       const lbl = document.getElementById("detYearLbl");
       if (lbl) lbl.textContent = `through ${y}`;
       e.target.setAttribute("aria-valuetext", `through ${y}`);
-      if (map.getLayer("detPt")) {
+      if (map && map.getLayer("detPt")) {
         map.setFilter("detPt", ["<=", ["get","year"], ["to-number", y]]);
       }
     };
@@ -814,13 +833,13 @@ async function load() {
   });
 
   // Pointer cursor over inspectable map features
-  ["ctyFill"].forEach(id => {
+  if (map) ["ctyFill"].forEach(id => {
     map.on("mousemove", id, () => { map.getCanvas().style.cursor = "pointer"; });
     map.on("mouseleave", id, () => { map.getCanvas().style.cursor = ""; });
   });
 
   // Map click interaction
-  map.on("click", async e => {
+  if (map) map.on("click", async e => {
     const card = document.getElementById("clickcard");
     if (!card) return;
     explainSeq++; // map-picked card supersedes a pending watershed explain
@@ -880,8 +899,8 @@ async function load() {
 
 // Species drill-down selection with P(host) gauge bar & whiskers
 function handleSpeciesSelect(spList, key) {
-  if (map.getLayer("suit")) map.removeLayer("suit");
-  if (map.getSource("suit")) map.removeSource("suit");
+  if (map && map.getLayer("suit")) map.removeLayer("suit");
+  if (map && map.getSource("suit")) map.removeSource("suit");
 
   const row = (Array.isArray(spList) ? spList : []).find(r => String(r.specieskey) === String(key));
   const selEl = document.getElementById("sel");
@@ -926,7 +945,7 @@ function handleSpeciesSelect(spList, key) {
   }
 
   // Preload species raster with Image() onload/onerror
-  if (key && META.suit_bbox) {
+  if (map && key && META.suit_bbox) {
     const imgUrl = SRC + `suit_${key}.png`;
     const preloader = new Image();
     preloader.onload = () => {
@@ -1037,7 +1056,7 @@ async function explainWatershed(huc, statesStr) {
         }
       }
     });
-    if (bounds) {
+    if (map && bounds) {
       try {
         map.fitBounds([[bounds[0], bounds[1]], [bounds[2], bounds[3]]], {padding: 40, maxZoom: 8, duration: REDUCED_MOTION ? 0 : 1200});
       } catch(e) {}
@@ -1065,7 +1084,7 @@ async function explainWatershed(huc, statesStr) {
   }
 }
 
-map.on("load", load);
+if (map) map.on("load", load); else load();
 </script>
 </body>
 </html>
