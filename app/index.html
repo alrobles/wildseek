@@ -1,5 +1,5 @@
 <!doctype html>
-<html>
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <title>WildSeek — wildlife disease monitor</title>
@@ -7,124 +7,276 @@
 <link href="https://unpkg.com/maplibre-gl@4/dist/maplibre-gl.css" rel="stylesheet">
 <script src="https://unpkg.com/maplibre-gl@4/dist/maplibre-gl.js"></script>
 <style>
-  body { margin:0; font:13px system-ui, sans-serif; }
+  :root {
+    --bg-base: #0d1117;
+    --bg-card: #161b22;
+    --bg-card-hover: #1f242c;
+    --border-subtle: #30363d;
+    --border-dim: #21262d;
+    --text-main: #e6edf3;
+    --text-muted: #8b949e;
+    --accent-blue: #58a6ff;
+    --accent-pink: #f781bf;
+    --accent-coral: #f78166;
+    --badge-green-bg: #23863626;
+    --badge-green-text: #3fb950;
+    --badge-green-border: #23863666;
+    --badge-amber-bg: #d2992226;
+    --badge-amber-text: #d29922;
+    --badge-amber-border: #d2992266;
+    --badge-blue-bg: #388bfd26;
+    --badge-blue-text: #58a6ff;
+    --badge-blue-border: #388bfd66;
+  }
+  * { box-sizing: border-box; }
+  body { margin:0; font:13px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background:var(--bg-base); color:var(--text-main); }
   #map { position:absolute; inset:0; }
-  #panel { position:absolute; top:0; left:0; width:330px; max-height:100vh;
-           overflow:auto; background:#0d1117ee; color:#e6edf3; padding:12px;
-           z-index:5; }
-  #panel h1 { font-size:15px; margin:4px 0 8px; }
-  #panel h2 { font-size:12px; margin:10px 0 4px; color:#8b949e;
-              text-transform:uppercase; letter-spacing:.05em; }
-  .stat { color:#8b949e; margin:2px 0; }
-  #panel select, #panel input[type=range] { width:100%; background:#161b22;
-    color:#e6edf3; border:1px solid #30363d; padding:5px; margin:4px 0; }
-  .layer { margin:6px 0; }
-  .card { background:#161b22; border:1px solid #30363d; border-radius:6px;
-          padding:8px; margin:6px 0; }
-  .card h3 { margin:0 0 4px; font-size:13px; color:#58a6ff; }
-  .card .sub { color:#8b949e; font-size:11px; }
-  #wslist { max-height:200px; overflow:auto; }
-  .wsrow { padding:3px 4px; border-bottom:1px solid #21262d; cursor:pointer; }
-  .wsrow:hover { background:#1f242c; }
-  .wsrow b { color:#f781bf; font-weight:500; }
-  .badge { display:inline-block; background:#f7816622; color:#f78166;
-           border:1px solid #f7816655; border-radius:4px; font-size:10px;
-           padding:0 4px; margin-left:4px; }
-  button { background:#21262d; color:#e6edf3; border:1px solid #30363d;
-           padding:5px 8px; cursor:pointer; border-radius:5px; }
-  #brief { white-space:pre-wrap; font-size:11px; }
-  details { margin:8px 0; }
-  summary { cursor:pointer; color:#8b949e; }
-@media (prefers-reduced-motion: reduce) {
-  * { transition: none !important; animation: none !important; }
-}
-@media (max-width: 600px) {
-  #panel { width: 100%; max-height: 40vh; }
-  #map { inset: 0; top: 0; }
-}
+  #panel { position:absolute; top:0; left:0; width:340px; max-height:100vh;
+           overflow-y:auto; overflow-x:hidden; background:#0d1117f2; color:var(--text-main);
+           padding:12px 12px 56px 12px; z-index:5; scrollbar-width:thin; }
+  #panel h1 { font-size:15px; margin:4px 0 6px; font-weight:600; display:flex; align-items:center; }
+  #panel h2 { font-size:12px; margin:12px 0 6px; color:var(--text-muted);
+              text-transform:uppercase; letter-spacing:.05em; font-weight:600; }
+  .stat { color:var(--text-muted); margin:4px 0; font-size:11px; line-height:1.45; }
+  .tabular { font-variant-numeric: tabular-nums; }
+  #panel select, #panel input[type=range] { width:100%; background:var(--bg-card);
+    color:var(--text-main); border:1px solid var(--border-subtle); padding:5px 6px; margin:4px 0; border-radius:4px; }
+  .layer { margin:8px 0; }
+  .layer label { cursor:pointer; display:flex; align-items:center; gap:6px; font-size:12px; }
+  .card { background:var(--bg-card); border:1px solid var(--border-subtle); border-radius:6px;
+          padding:8px 10px; margin:8px 0; }
+  .card h3 { margin:0 0 6px; font-size:13px; color:var(--accent-blue); display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:4px; }
+  .card .sub { color:var(--text-muted); font-size:11px; line-height:1.4; }
+  details.card { padding:8px 10px; }
+  details summary { cursor:pointer; outline:none; user-select:none; font-weight:500; }
+  details.card summary h3 { display:inline-flex; margin:0; }
+  details summary::-webkit-details-marker { color:var(--text-muted); }
+  .exp-inner { margin-top:8px; border-top:1px solid var(--border-dim); padding-top:6px; }
+
+  /* Badges */
+  .badge { display:inline-block; border-radius:4px; font-size:10px;
+           padding:1px 5px; font-weight:500; white-space:nowrap; vertical-align:middle; line-height:1.3; }
+  .badge-neutral, .badge-blue { background:var(--badge-blue-bg); color:var(--badge-blue-text); border:1px solid var(--badge-blue-border); }
+  .badge-green { background:var(--badge-green-bg); color:var(--badge-green-text); border:1px solid var(--badge-green-border); }
+  .badge-amber { background:var(--badge-amber-bg); color:var(--badge-amber-text); border:1px solid var(--badge-amber-border); }
+  .badge-coral { background:#f7816622; color:#f78166; border:1px solid #f7816655; }
+
+  /* Watershed rows */
+  #wslist { max-height:220px; overflow-y:auto; scrollbar-width:thin; }
+  .wsrow { padding:6px 6px; border-bottom:1px solid var(--border-dim); cursor:pointer; border-radius:4px; margin-bottom:2px; }
+  .wsrow:hover { background:var(--bg-card-hover); }
+  .wsrow b { color:var(--accent-pink); font-weight:600; }
+  .risk-track { height:3px; background:#21262d; border-radius:2px; margin-top:4px; overflow:hidden; }
+  .risk-fill { height:100%; background:linear-gradient(90deg, #58a6ff, #f781bf); border-radius:2px; }
+
+  /* Lists & Buttons */
+  .more-btn { background:var(--border-dim); color:var(--text-muted); border:1px solid var(--border-subtle);
+              font-size:10px; padding:2px 6px; border-radius:3px; cursor:pointer; margin-top:6px; display:inline-block; }
+  .more-btn:hover { color:var(--text-main); background:var(--bg-card-hover); }
+
+  /* Whiskers Gauge */
+  .gauge-wrap { position:relative; height:14px; background:#21262d; border-radius:3px; margin:6px 0 4px; overflow:hidden; }
+  .gauge-whisker { position:absolute; top:2px; bottom:2px; background:#388bfd44; border-left:2px solid #58a6ff; border-right:2px solid #58a6ff; }
+  .gauge-point { position:absolute; top:1px; bottom:1px; width:3px; background:#f781bf; border-radius:1px; }
+
+  /* Legend (floating bottom-right) */
+  #legend-container {
+    position:absolute; bottom:32px; right:12px; z-index:10;
+    width:220px; background:#0d1117f2; border:1px solid var(--border-subtle);
+    border-radius:6px; font-size:11px; color:var(--text-main); box-shadow:0 4px 12px #00000066;
+  }
+  #legend-container summary { padding:6px 10px; font-weight:600; color:var(--text-muted); cursor:pointer; list-style:none; }
+  #legend-container summary::-webkit-details-marker { display:none; }
+  #legend-container summary::after { content:" ▾"; float:right; }
+  #legend-container[open] summary::after { content:" ▴"; }
+  .legend-body { padding:0 10px 8px; border-top:1px solid var(--border-dim); }
+  .legend-row { margin:6px 0; }
+  .legend-title { color:var(--text-muted); font-size:10px; text-transform:uppercase; margin-bottom:2px; }
+  .legend-bar { height:8px; border-radius:2px; width:100%; margin:2px 0; }
+  .legend-labels { display:flex; justify-content:space-between; font-size:9px; color:var(--text-muted); }
+  .legend-dot { display:inline-block; width:8px; height:8px; border-radius:50%; margin-right:5px; vertical-align:middle; }
+
+  /* Detections Sparkline */
+  #det-sparkline { margin-top:4px; display:flex; align-items:center; gap:8px; }
+  #det-sparkline svg { overflow:visible; }
+
+  /* Susceptibility distribution */
+  #sus-dist { margin-top:8px; padding-top:6px; border-top:1px solid var(--border-dim); }
+
+  @media (prefers-reduced-motion: reduce) {
+    * { transition: none !important; animation: none !important; }
+  }
+  @media (max-width: 600px) {
+    #panel { width: 100%; max-height: 48vh; padding-bottom:56px; }
+    #legend-container { display:none; }
+  }
 </style>
 </head>
 <body>
 <div id="map"></div>
 <div id="panel">
-  <h1>WildSeek — HPAI Monitor <span id="healthdot" style="display:inline-block;width:8px;height:8px;background:#888;border-radius:50%;margin-left:6px;vertical-align:middle;"></span></h1>
+  <h1>WildSeek — HPAI Monitor <span id="healthdot" title="Live API health status (/health)" style="display:inline-block;width:8px;height:8px;background:#888;border-radius:50%;margin-left:6px;vertical-align:middle;"></span></h1>
   <div class="stat">Ecological surveillance for wildlife professionals — not medical advice.</div>
-  <div class="stat" id="meta">loading…</div>
+  <div class="stat tabular" id="meta">loading…</div>
 
-  <div class="card">
-    <h3>Nightly briefing <span class="badge">muse-wonder</span></h3>
-    <div class="stat" id="brief">loading…</div>
+  <!-- 1. Briefing Card (Headline + Top-3 hotspots + details) -->
+  <div class="card" id="brief-card">
+    <h3>Nightly briefing <span class="badge badge-blue" title="Automated synthesis generated by DeepSeek reasoning model">muse-wonder</span></h3>
+    <div id="brief-headline" style="font-weight:600;margin-bottom:6px;color:var(--text-main);">loading…</div>
+    <div id="brief-hotspots" class="stat tabular" style="color:var(--text-main);margin-bottom:6px;"></div>
+    <details id="brief-more" style="margin:4px 0 0;">
+      <summary style="font-size:11px;color:var(--accent-blue);">Watchlist &amp; methodology note</summary>
+      <div class="exp-inner">
+        <div style="font-size:10px;text-transform:uppercase;color:var(--text-muted);margin:4px 0 2px;">Watchlist</div>
+        <div id="brief-watchlist" class="stat tabular"></div>
+        <div style="font-size:10px;text-transform:uppercase;color:var(--text-muted);margin:8px 0 2px;">Methods Note</div>
+        <div id="brief-methods" class="stat" style="white-space:pre-wrap;"></div>
+      </div>
+    </details>
   </div>
 
-  <div class="card">
-    <h3>Model cascade</h3>
-    <div class="stat" id="mxlist">loading…</div>
-  </div>
+  <!-- 2. Model Cascade Card (Collapsible) -->
+  <details class="card" id="mx-card" open>
+    <summary><h3>Model cascade</h3></summary>
+    <div class="exp-inner stat tabular" id="mxlist">loading…</div>
+  </details>
 
-  <div class="card">
-    <h3>Litmine loop <span class="badge">daily</span></h3>
-    <div class="stat" id="lmstat">loading…</div>
-    <div class="stat" id="lmlist" style="font-size:11px"></div>
-  </div>
+  <!-- 3. Litmine Loop Card (Collapsible) -->
+  <details class="card" id="lm-card" open>
+    <summary><h3>Litmine loop <span class="badge badge-blue" title="Daily PubMed literature mining cycle">daily</span></h3></summary>
+    <div class="exp-inner">
+      <div class="stat tabular" id="lmstat">loading…</div>
+      <div class="stat tabular" id="lmlist" style="font-size:11px"></div>
+    </div>
+  </details>
 
-  <div class="card" id="wcicard">
-    <h3>We called it <span class="badge">dated prediction</span></h3>
-    <div class="stat" id="wcilist">loading…</div>
-  </div>
+  <!-- 4. We Called It Card (Collapsible) -->
+  <details class="card" id="wcicard" open>
+    <summary><h3>We called it <span class="badge badge-amber" title="Predictive model baseline locked before subsequent literature validation">dated prediction</span></h3></summary>
+    <div class="exp-inner stat tabular" id="wcilist">loading…</div>
+  </details>
 
-  <div class="card">
-    <h3>Decision delta <span class="badge">executable</span></h3>
-    <div class="stat" id="dstat">loading…</div>
-    <div class="stat" id="dlist" style="font-size:11px"></div>
-  </div>
+  <!-- 5. Decision Delta Card (Collapsible) -->
+  <details class="card" id="d-card" open>
+    <summary><h3>Decision delta <span class="badge badge-blue" title="Actionable automated model refit and taxonomy audit pipeline">executable</span></h3></summary>
+    <div class="exp-inner">
+      <div class="stat tabular" id="dstat">loading…</div>
+      <div class="stat tabular" id="dlist" style="font-size:11px"></div>
+    </div>
+  </details>
 
   <h2>Watershed watchlist</h2>
-  <div id="wslist" class="stat">loading…</div>
+  <div id="wslist" class="stat tabular">loading…</div>
 
   <h2>Layers</h2>
-  <div class="layer"><label><input type="checkbox" id="ckRisk" checked>
-    surveillance priority (detection × susceptibility)</label></div>
-  <div class="layer"><label><input type="checkbox" id="ckRsv">
-    reservoir community</label>
+  <div class="layer">
+    <label title="Surveillance priority score calculated from historical detection density multiplied by reservoir host susceptibility">
+      <input type="checkbox" id="ckRisk" checked>
+      surveillance priority (detection × susceptibility)
+    </label>
+  </div>
+  <div class="layer">
+    <label title="Modeled ecological reservoir host community raster">
+      <input type="checkbox" id="ckRsv">
+      reservoir community
+    </label>
     <select id="rsvMode" style="margin-left:16px;font-size:11px">
       <option value="sum">expected # hosts</option>
       <option value="prob">P(&ge;1 susceptible host)</option>
       <option value="max">strongest host</option>
-    </select></div>
-  <div class="layer"><label><input type="checkbox" id="ckCty">
-    exposure by county</label>
+    </select>
+  </div>
+  <div class="layer">
+    <label title="USDA-APHIS commercial poultry inventory or dairy herd exposure at county level">
+      <input type="checkbox" id="ckCty">
+      exposure by county
+    </label>
     <select id="ctyMode" style="margin-left:16px;font-size:11px">
       <option value="exposure">poultry (county)</option>
       <option value="dairy_exposure">dairy herds (state)</option>
-    </select></div>
-  <div class="layer"><label><input type="checkbox" id="ckDet">
-    wild-bird HPAI detections</label>
-    <input type="range" id="detYear" min="2022" max="2026" value="2026" step="1">
-    <div class="stat" id="detYearLbl">through 2026</div></div>
-  <div class="layer"><label><input type="checkbox" id="ckFlock">
-    flock confirmations (APHIS)</label></div>
-  <div class="layer"><label><input type="checkbox" id="ckFly" checked>
-    flyways</label></div>
+    </select>
+  </div>
+  <div class="layer">
+    <label title="Confirmed wild-bird HPAI detections from USDA-APHIS / USGS NWHC">
+      <input type="checkbox" id="ckDet">
+      wild-bird HPAI detections
+    </label>
+    <input type="range" id="detYear" min="2022" max="2026" value="2026" step="1" title="Filter detection points up to year">
+    <div class="stat tabular" style="display:flex;justify-content:space-between;align-items:center;">
+      <span id="detYearLbl">through 2026</span>
+      <span id="det-sparkline"></span>
+    </div>
+  </div>
+  <div class="layer">
+    <label title="USDA-APHIS commercial and backyard flock infection confirmations">
+      <input type="checkbox" id="ckFlock">
+      flock confirmations (APHIS)
+    </label>
+  </div>
+  <div class="layer">
+    <label title="Administrative migratory bird flyway corridors across North America">
+      <input type="checkbox" id="ckFly" checked>
+      flyways
+    </label>
+  </div>
 
   <div class="card" id="clickcard" style="display:none">
     <h3 id="ccTitle"></h3>
     <div class="sub" id="ccSub"></div>
-    <div id="ccBody" style="margin-top:4px"></div>
+    <div id="ccBody" style="margin-top:4px" class="tabular"></div>
   </div>
 
-  <details>
+  <details style="margin-top:10px;">
     <summary id="spHead">species drill-down</summary>
     <select id="spSel"><option value="">— pick species —</option></select>
-    <div class="stat" id="sel"></div>
+    <div class="stat tabular" id="sel"></div>
+    <div id="rasterNotice" class="sub tabular" style="color:#d29922;margin-top:4px;display:none;"></div>
+
+    <!-- Susceptibility distribution SVG histogram -->
+    <details id="sus-dist" style="display:none;">
+      <summary style="font-size:11px;color:var(--text-muted);cursor:pointer;">Susceptibility distribution (top 1,000)</summary>
+      <div id="sus-svg" style="margin-top:6px;"></div>
+    </details>
   </details>
-  <div class="stat" style="margin-top:8px">EcoSeek stack · public data:
-    GBIF / ERA5 / RESOLVE / USDA-APHIS / USGS WBD</div>
+
+  <div class="stat" style="margin-top:12px;padding-top:8px;border-top:1px solid var(--border-dim);">
+    EcoSeek stack · public data: GBIF / ERA5 / RESOLVE / USDA-APHIS / USGS WBD
+  </div>
 </div>
+
+<!-- Floating Map Legend -->
+<details id="legend-container" open>
+  <summary>Map Legend</summary>
+  <div class="legend-body">
+    <div class="legend-row">
+      <div class="legend-title" title="Surveillance priority score combining bird detection density and host community suitability">Surveillance Risk Raster</div>
+      <div class="legend-bar" style="background:linear-gradient(90deg, #1a9641, #a6d96a, #ffffbf, #fdae61, #d7191c);"></div>
+      <div class="legend-labels"><span>Low</span><span>Moderate</span><span>High</span></div>
+    </div>
+    <div class="legend-row">
+      <div class="legend-title" title="Normalized county-level exposure based on poultry inventory and flock events">County Exposure</div>
+      <div class="legend-bar" style="background:linear-gradient(90deg, #fee8c8, #fdbb84, #e34a33);"></div>
+      <div class="legend-labels"><span>0.0</span><span>0.5</span><span>&ge; 1.0</span></div>
+    </div>
+    <div class="legend-row" style="display:flex;align-items:center;justify-content:space-between;margin-top:8px;">
+      <span title="Individual confirmed wild-bird HPAI cases"><span class="legend-dot" style="background:#f781bf;"></span>Wild detections</span>
+      <span title="Confirmed flock outbreaks scaled by bird count"><span class="legend-dot" style="background:#f78166;border:1px solid #fff3;"></span>Flock events</span>
+    </div>
+    <div class="legend-row" style="display:flex;align-items:center;margin-top:4px;">
+      <span title="Administrative migratory flyways (Atlantic, Mississippi, Central, Pacific)"><span class="legend-dot" style="background:#58a6ff;opacity:0.4;"></span>Flyway corridors</span>
+    </div>
+  </div>
+</details>
+
+<footer style="position:fixed;bottom:0;left:0;right:0;padding:6px 12px;font:11px/1.4 system-ui, sans-serif;color:#8b949e;background:#0d1117ee;border-top:1px solid #30363d;z-index:1000;text-align:center;">
+  WildSeek is an ecological surveillance research tool for wildlife professionals. Not medical advice, not for personal health decisions.
+</footer>
 
 <script>
 const SRC = "data/";
 const esc = s => String(s ?? "").replace(/[&<>"']/g,
   c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+
 const map = new maplibregl.Map({
   container: "map",
   style: { version: 8,
@@ -137,27 +289,43 @@ const map = new maplibregl.Map({
 map.addControl(new maplibregl.NavigationControl());
 
 let META = {};
+let STATE_BBOXES = {};
 
+// Parallel initial loader
 async function load() {
-  META = await fetch(SRC+"meta.json").then(r=>r.json()).catch(()=>({}));
-  document.getElementById("meta").textContent =
-    `${META.n_species ?? "?"} spp modelled · ${META.n_detections ?? "?"} ` +
-    `HPAI detections · built ${META.built ?? ""}`;
+  // 1. Health check (independent)
+  fetch('/health').then(r=>r.json()).then(h => {
+    const healthDot = document.getElementById('healthdot');
+    if (healthDot) healthDot.style.background = (h.status && h.status.toLowerCase()==='ok') ? '#238636' : '#da3633';
+  }).catch(() => {
+    const healthDot = document.getElementById('healthdot');
+    if (healthDot) healthDot.style.background = '#8b949e';
+  });
 
-  // --- health status dot ---------------------------------------------
-  const healthDot = document.getElementById('healthdot');
-  fetch('/health').then(r=>r.json()).then(h=>{
-    healthDot.style.background = (h.status && h.status.toLowerCase()==='ok') ? '#28a745' : '#d73a49';
-  }).catch(()=>{ healthDot.style.background = '#888'; });
-  // image sources need meta keys; without them the source URL would be
-  // "undefined" and the whole load() would die — guard each one.
-  if (META.risk_png && META.risk_bbox) {
-    map.addSource("risk", {type:"image", url: SRC+META.risk_png,
-      coordinates: META.risk_bbox});
-    map.addLayer({id:"riskFill", type:"raster", source:"risk",
-      paint:{"raster-opacity":0.7}});
-  } else document.getElementById("ckRisk").disabled = true;
+  // 2. Fetch META & initialize map base sources
+  const metaPromise = fetch(SRC+"meta.json").then(r=>r.json()).then(meta => {
+    META = meta;
+    const metaEl = document.getElementById("meta");
+    if (metaEl) {
+      metaEl.textContent = `${META.n_species ?? "?"} spp modelled · ${META.n_detections ?? "?"} HPAI detections · built ${META.built ?? ""}`;
+    }
+    if (META.risk_png && META.risk_bbox) {
+      if (!map.getSource("risk")) {
+        map.addSource("risk", {type:"image", url: SRC+META.risk_png, coordinates: META.risk_bbox});
+        map.addLayer({id:"riskFill", type:"raster", source:"risk", paint:{"raster-opacity":0.7}});
+      }
+    } else {
+      const ck = document.getElementById("ckRisk");
+      if (ck) ck.disabled = true;
+    }
+    setRsv(document.getElementById("rsvMode")?.value || "sum");
+    return meta;
+  }).catch(err => {
+    console.error("meta error", err);
+    return {};
+  });
 
+  // Setup static map sources
   map.addSource("cty", {type:"geojson", data: SRC+"county_exposure.geojson"});
   map.addLayer({id:"ctyFill", type:"fill", source:"cty",
     layout:{visibility:"none"},
@@ -173,23 +341,7 @@ async function load() {
   map.addSource("det", {type:"geojson", data: SRC+"detections.geojson"});
   map.addLayer({id:"detPt", type:"circle", source:"det",
     layout:{visibility:"none"},
-    paint:{"circle-radius":2.5,"circle-color":"#f781bf",
-      "circle-opacity":0.6}});
-
-  const setRsv = mode => {
-    if (map.getLayer("rsv")) map.removeLayer("rsv");
-    if (map.getSource("rsv")) map.removeSource("rsv");
-    if (!META.suit_bbox) return;
-    map.addSource("rsv", {type:"image",
-      url: SRC+`reservoir_${mode}.png`, coordinates: META.suit_bbox});
-    map.addLayer({id:"rsv", type:"raster", source:"rsv",
-      layout:{visibility: document.getElementById("ckRsv").checked
-        ? "visible" : "none"},
-      paint:{"raster-opacity":0.65}}, "ctyFill");
-  };
-  setRsv("sum");
-  document.getElementById("rsvMode").onchange =
-    e => setRsv(e.target.value);
+    paint:{"circle-radius":2.5,"circle-color":"#f781bf","circle-opacity":0.6}});
 
   map.addSource("flock", {type:"geojson", data: SRC+"poultry.geojson"});
   map.addLayer({id:"flockPt", type:"circle", source:"flock",
@@ -199,241 +351,553 @@ async function load() {
       "circle-color":"#f78166","circle-opacity":0.7,
       "circle-stroke-color":"#fff3","circle-stroke-width":1}});
 
-  // --- watershed watchlist -----------------------------------------
-  const ws = await fetch("/risk/watershed?top=15").then(r=>r.json())
-    .catch(()=>[]);
-  const wl = document.getElementById("wslist");
-  wl.innerHTML = ws.map(w =>
-    `<div class="wsrow" data-huc="${esc(w.huc8)}">
-       <b>${(w.risk ?? 0).toFixed(3)}</b> ${esc(w.name)} <span class="sub">${esc(w.states)}</span>
-       <div class="sub">${w.n_det} detections · max ${(w.max_risk ?? 0).toFixed(2)}</div>
-     </div>`).join("") || "unavailable";
-  wl.querySelectorAll(".wsrow").forEach(el => el.onclick =
-    () => explainWatershed(el.dataset.huc));
+  // Cache state bboxes from cty geojson for instant flyTo
+  map.on("data", e => {
+    if (e.sourceId === "cty" && e.isSourceLoaded && Object.keys(STATE_BBOXES).length === 0) {
+      try {
+        const feats = map.querySourceFeatures("cty");
+        feats.forEach(f => {
+          const st = f.properties && f.properties.state;
+          if (!st || !f.geometry) return;
+          if (!STATE_BBOXES[st]) STATE_BBOXES[st] = [180, 90, -180, -90];
+          const coords = [];
+          const walk = c => {
+            if (typeof c[0] === 'number') coords.push(c);
+            else for (let i = 0; i < c.length; i++) walk(c[i]);
+          };
+          walk(f.geometry.coordinates);
+          coords.forEach(p => {
+            if (p[0] < STATE_BBOXES[st][0]) STATE_BBOXES[st][0] = p[0];
+            if (p[1] < STATE_BBOXES[st][1]) STATE_BBOXES[st][1] = p[1];
+            if (p[0] > STATE_BBOXES[st][2]) STATE_BBOXES[st][2] = p[0];
+            if (p[1] > STATE_BBOXES[st][3]) STATE_BBOXES[st][3] = p[1];
+          });
+        });
+      } catch(err) {}
+    }
+  });
 
-  // --- briefing -----------------------------------------------------
-  try {
-    const b = await fetch("/briefing").then(r=>r.json());
-    document.getElementById("brief").textContent =
-      (b.headline ?? "") + "\n\nHOTSPOTS\n" +
-      (b.hotspots ?? []).map(h=>"• "+h).join("\n") +
-      ((b.watchlist ?? []).length ?
-        "\n\nWATCHLIST\n"+b.watchlist.map(w=>"• "+w).join("\n") : "") +
-      "\n\n" + (b.methods_note ?? "");
-  } catch(e) { document.getElementById("brief").textContent =
-    "briefing unavailable"; }
+  // Sparkline generator for detections
+  let sparklineDrawn = false;
+  map.on("data", e => {
+    if (e.sourceId === "det" && e.isSourceLoaded && !sparklineDrawn) {
+      try {
+        const feats = map.querySourceFeatures("det");
+        if (feats && feats.length > 0) {
+          sparklineDrawn = true;
+          renderDetSparkline(feats);
+        }
+      } catch(err) {}
+    }
+  });
 
-  // --- model cascade + metrics ---------------------------------------
-  try {
-    const m = await fetch("/metrics").then(r=>r.json());
-    const mc = m.model_cascade || {};
-    document.getElementById("mxlist").innerHTML =
-      Object.entries(mc).map(([k,v]) =>
-        `<span class="badge">${esc(k)}</span> ${esc(v.role)}` +
+  // 3. Parallel fetch of all panel data cards via Promise.allSettled
+  Promise.allSettled([
+    // Watershed watchlist
+    fetch("/risk/watershed?top=15").then(r=>r.json()).then(ws => {
+      const wl = document.getElementById("wslist");
+      if (!wl) return;
+      if (!Array.isArray(ws) || ws.length === 0) {
+        wl.textContent = "unavailable";
+        return;
+      }
+      const maxRisk = Math.max(...ws.map(w => Number(w.risk ?? 0)), 0.001);
+      wl.innerHTML = ws.map(w => {
+        const rVal = Number(w.risk ?? 0);
+        const pct = Math.min(100, Math.max(4, Math.round((rVal / maxRisk) * 100)));
+        return `<div class="wsrow" data-huc="${esc(w.huc8)}" data-states="${esc(w.states)}" title="Click to inspect watershed ${esc(w.huc8)}">
+          <div style="display:flex;justify-content:space-between;align-items:center;">
+            <span><b title="Normalized watershed surveillance risk score">${rVal.toFixed(3)}</b> ${esc(w.name)}</span>
+            <span class="sub">${esc(w.states)}</span>
+          </div>
+          <div class="risk-track" title="Surveillance priority risk: ${pct}% of max"><div class="risk-fill" style="width:${pct}%"></div></div>
+          <div class="sub" style="margin-top:3px;"><span title="Total wild-bird HPAI detections">${w.n_det} detections</span> · <span title="Peak pixel-level surveillance risk in this watershed">max ${(w.max_risk ?? 0).toFixed(2)}</span></div>
+        </div>`;
+      }).join("");
+      wl.querySelectorAll(".wsrow").forEach(el => el.onclick = () => explainWatershed(el.dataset.huc, el.dataset.states));
+    }).catch(() => {
+      const wl = document.getElementById("wslist");
+      if (wl) wl.textContent = "watershed watchlist unavailable";
+    }),
+
+    // Briefing
+    fetch("/briefing").then(r=>r.json()).then(b => {
+      const hEl = document.getElementById("brief-headline");
+      const hsEl = document.getElementById("brief-hotspots");
+      const wlEl = document.getElementById("brief-watchlist");
+      const mEl = document.getElementById("brief-methods");
+      if (hEl) hEl.textContent = b.headline || "Nightly Surveillance Brief";
+      if (hsEl) {
+        const top3 = (b.hotspots || []).slice(0, 3);
+        hsEl.innerHTML = top3.length ?
+          top3.map(h => `<div style="margin:2px 0;">• ${esc(h)}</div>`).join("") :
+          "No primary hotspots detected";
+      }
+      if (wlEl) {
+        const wlist = b.watchlist || [];
+        wlEl.innerHTML = wlist.length ?
+          wlist.map(w => `<div style="margin:2px 0;">• ${esc(w)}</div>`).join("") :
+          "None listed";
+      }
+      if (mEl) mEl.textContent = b.methods_note || "Standard calibration pipeline.";
+    }).catch(() => {
+      const hEl = document.getElementById("brief-headline");
+      if (hEl) hEl.textContent = "briefing unavailable";
+    }),
+
+    // Model cascade & metrics
+    fetch("/metrics").then(r=>r.json()).then(m => {
+      const mxEl = document.getElementById("mxlist");
+      if (!mxEl) return;
+      const mc = m.model_cascade || {};
+      const cascadeHtml = Object.entries(mc).map(([k, v]) =>
+        `<span class="badge badge-blue" title="Reasoning/triage model in cascade">${esc(k)}</span> ${esc(v.role)}` +
         (v.calls!=null ? ` · ${v.calls} calls` : "") +
         (v.cost_usd!=null ? ` · $${v.cost_usd.toFixed(2)}` : "")
-      ).join("<br>") +
-      (m.model ? `<br><span class="sub">CV ROC-AUC ` +
+      ).join("<br>");
+
+      const modelMetrics = m.model ? `<br><span class="sub" title="Cross-validation ROC Area Under Curve and Precision-Recall Area Under Curve">CV ROC-AUC ` +
         `${m.model.roc_auc}±${m.model.roc_sd} · PR ${m.model.pr_auc} · ` +
-        `${m.model.positives}/${m.model.species} labeled</span>` : "") +
-      (m.litmine ? `<br><span class="sub">litmine: ${m.litmine.edges}` +
+        `${m.model.positives}/${m.model.species} labeled</span>` : "";
+
+      const litmineMetrics = m.litmine ? `<br><span class="sub" title="Literature extraction throughput and precision audit">litmine: ${m.litmine.edges}` +
         ` edges · ${m.litmine.papers} papers · $${m.litmine.cost_usd}` +
         ` total · $${m.litmine.cost_per_edge_usd}/edge` +
         (m.litmine.precision_raw_audit != null ?
           ` · precision ${(m.litmine.precision_raw_audit*100).toFixed(0)}%` +
-          ` → ${(m.litmine.precision_judge_verified*100).toFixed(0)}%` +
-          ` after judge` : "") +
-        `</span>` : "") +
-      (m.supply_chain ? `<br><span class="sub">supply chain: ` +
+          ` → ${(m.litmine.precision_judge_verified*100).toFixed(0)}% after judge` : "") +
+        `</span>` : "";
+
+      const supplyMetrics = m.supply_chain ? `<br><span class="sub">supply chain: ` +
         `${(m.supply_chain.egg_layer_birds_affected/1e6).toFixed(0)}M` +
         ` egg-layer birds lost (${m.supply_chain.egg_layer_events} events)` +
         ` · ${m.supply_chain.dairy_herd_events} dairy herds in ` +
-        `${m.supply_chain.dairy_states} states (APHIS)</span>` : "") +
-      `<br><span class="badge">NEW Glimmer triage LoRA</span> ` +
-      `<span class="sub">hold-out exact-match 0.0 → 0.70 (Fireworks)</span>`;
-  } catch(e) { document.getElementById("mxlist").textContent =
-    "metrics unavailable"; }
+        `${m.supply_chain.dairy_states} states (APHIS)</span>` : "";
 
-  // --- litmine loop ticker -------------------------------------------
-  try {
-    const lm = await fetch("/litmine").then(r=>r.json());
-    document.getElementById("lmstat").textContent =
-      `${lm.papers} papers → ${lm.chunks} chunks → ` +
-      `${lm.yes_chunks} YES → ${lm.edges} edges` +
-      (lm.unique_pairs ? `/${lm.unique_pairs} pairs` : "") +
-      (lm.verified ? ` (${lm.verified} judge-verified)` : "") +
-      ` · updated ${lm.updated}`;
-    document.getElementById("lmlist").innerHTML =
-      (lm.recent||[]).map(r => {
-        const p = r.parasite || r.para_texts || "?";
-        const h = r.host || r.host_texts || "?";
-        const v = String(r.verified).toLowerCase()==="true" ? "✓ " : "";
-        const pmid = encodeURIComponent(String(r.pmid ?? ""));
-        return `<a href="https://pubmed.ncbi.nlm.nih.gov/${pmid}/" ` +
-          `target="_blank" style="color:#58a6ff">PMID ${esc(r.pmid)}</a> ` +
-          `<span style="color:#3fb950">${v}</span>` +
-          `${esc(p)} → ${esc(h)} <span class="sub">${esc(r.relation)}` +
-          (r.evidence_span ? ` · “${esc(String(r.evidence_span).slice(0,80))}”` : "") +
-          `</span>`;
-      }).join("<br>");
-  } catch(e) { document.getElementById("lmstat").textContent =
-    "litmine ticker unavailable"; }
+      mxEl.innerHTML = cascadeHtml + modelMetrics + litmineMetrics + supplyMetrics +
+        `<br><span class="badge badge-amber" title="Domain-specialized triage LoRA adapter">NEW Glimmer triage LoRA</span> ` +
+        `<span class="sub">hold-out exact-match 0.0 → 0.70 (Fireworks)</span>`;
+    }).catch(() => {
+      const mxEl = document.getElementById("mxlist");
+      if (mxEl) mxEl.textContent = "metrics unavailable";
+    }),
 
-  // --- we-called-it card ---------------------------------------------
-  try {
-    const w = await fetch("/we-called-it").then(r=>r.json());
-    const conf = w.predictions.filter(p=>p.status==="confirmed").length;
-    document.getElementById("wcilist").innerHTML =
-      `predicted <b>${esc(w.predicted_on)}</b> — top unlabeled species ` +
-      `by P(host). confirmed by a post-freeze PMID: <b>${conf}</b><br>` +
-      w.predictions.map(p =>
-        `${esc(p.species)} · ${Number(p.p_host).toFixed(2)} ` +
-        `<span class="sub">${p.status==="confirmed" ? "✓ confirmed" :
-          esc(p.status)}</span>`).join("<br>");
-  } catch(e) { document.getElementById("wcilist").textContent =
-    "predictions not frozen"; }
+    // Litmine loop ticker
+    fetch("/litmine").then(r=>r.json()).then(lm => {
+      const lmStat = document.getElementById("lmstat");
+      const lmList = document.getElementById("lmlist");
+      if (lmStat) {
+        lmStat.innerHTML = `<span title="Scientific publications mined">${lm.papers} papers</span> → ` +
+          `<span title="Extracted text chunks">${lm.chunks} chunks</span> → ` +
+          `<span title="Chunks containing positive host-pathogen interactions">${lm.yes_chunks} YES</span> → ` +
+          `<span title="Structured host-pathogen interaction edges">${lm.edges} edges</span>` +
+          (lm.unique_pairs ? `/${lm.unique_pairs} pairs` : "") +
+          (lm.verified ? ` (${lm.verified} judge-verified)` : "") +
+          ` · updated ${esc(lm.updated)}`;
+      }
+      if (lmList) {
+        const recent = lm.recent || [];
+        const renderList = count => {
+          const rows = recent.slice(0, count).map(r => {
+            const p = r.parasite || r.para_texts || "?";
+            const h = r.host || r.host_texts || "?";
+            const v = String(r.verified).toLowerCase()==="true" ? `<span style="color:#3fb950" title="Audited and confirmed by LLM-judge verification">✓ </span>` : "";
+            const pmid = encodeURIComponent(String(r.pmid ?? ""));
+            return `<div style="margin:3px 0;"><a href="https://pubmed.ncbi.nlm.nih.gov/${pmid}/" target="_blank" style="color:var(--accent-blue)">PMID ${esc(r.pmid)}</a> ` +
+              `${v}${esc(p)} → ${esc(h)} <span class="sub">${esc(r.relation)}` +
+              (r.evidence_span ? ` · “${esc(String(r.evidence_span).slice(0,75))}”` : "") +
+              `</span></div>`;
+          }).join("");
+          const btn = (recent.length > 5) ?
+            `<button type="button" class="more-btn" id="lm-toggle-btn">${count <= 5 ? `Show all ${recent.length}` : 'Show less'}</button>` : '';
+          lmList.innerHTML = rows + btn;
+          const toggle = document.getElementById("lm-toggle-btn");
+          if (toggle) {
+            toggle.onclick = () => renderList(count <= 5 ? recent.length : 5);
+          }
+        };
+        renderList(5);
+      }
+    }).catch(() => {
+      const lmStat = document.getElementById("lmstat");
+      if (lmStat) lmStat.textContent = "litmine ticker unavailable";
+    }),
 
-  // --- decision delta card -------------------------------------------
-  try {
-    const d = await fetch("/decisions").then(r=>r.json());
-    const cs = Object.entries(d.counts||{})
-      .map(([k,v])=>`${v} ${k}`).join(" · ");
-    document.getElementById("dstat").textContent =
-      `${d.rows.length} species: ${cs} · ${d.switches} switch_to ` +
-      `→ ${d.refit_queue}`;
-    const col = {"accept":"#3fb950","flag_review":"#d29922",
-                 "drop":"#f85149"};
-    document.getElementById("dlist").innerHTML =
-      d.rows.slice(0,10).map(r =>
-        `<span style="color:${col[r.decision]||'#8b949e'}">` +
-        `${esc(r.decision)}</span> ${esc(r.species)}` +
-        (r.switch_to && r.switch_to!=="none" ?
-          ` <b>⇒ ${esc(r.switch_to)}</b>` : "") +
-        ` <span class="sub">${esc(String(r.why||"").slice(0,90))}</span>`
-      ).join("<br>");
-  } catch(e) { document.getElementById("dstat").textContent =
-    "decision delta unavailable"; }
+    // We Called It Card
+    fetch("/we-called-it").then(r=>r.json()).then(w => {
+      const wciList = document.getElementById("wcilist");
+      if (!wciList) return;
+      const preds = w.predictions || [];
+      const conf = preds.filter(p=>p.status==="confirmed").length;
+      wciList.innerHTML = `predicted <b>${esc(w.predicted_on)}</b> — top unlabeled species ` +
+        `by <span title="Predicted host competency probability">P(host)</span>. confirmed post-freeze: <b>${conf}</b><br>` +
+        preds.map(p =>
+          `<div style="margin:2px 0;">${esc(p.species)} · <b title="Host competency probability">${Number(p.p_host).toFixed(2)}</b> ` +
+          `<span class="sub">${p.status==="confirmed" ? '<span style="color:#3fb950">✓ confirmed</span>' : esc(p.status)}</span></div>`
+        ).join("");
+    }).catch(() => {
+      const wciList = document.getElementById("wcilist");
+      if (wciList) wciList.textContent = "predictions not frozen";
+    }),
 
-  // --- species drill-down -------------------------------------------
-  const sel = document.getElementById("spSel");
-  const sp = await fetch("/species?limit=1200").then(r=>r.json()).catch(()=>[]);
-  document.getElementById("spHead").textContent =
-    `species drill-down (${sp.length} modelled)`;
-  (Array.isArray(sp) ? sp : []).forEach(r => {
-    const o = document.createElement("option");
-    o.value = r.specieskey;
-    o.textContent = r.species + (r.review ? " ⚠" : "");
-    sel.appendChild(o);
-  });
-  sel.onchange = () => {
-    if (map.getLayer("suit")) map.removeLayer("suit");
-    if (map.getSource("suit")) map.removeSource("suit");
-    const row = (Array.isArray(sp)?sp:[]).find(r=>r.specieskey==sel.value);
-    document.getElementById("sel").innerHTML = row ?
-      `${esc(row.species)} · ${esc(row.best_temp)}×${esc(row.best_prec)}` +
-      (row.p_host != null ? ` · <b>P(host)=${row.p_host.toFixed(2)}</b>` +
-       (row.p05 != null ? ` [${row.p05.toFixed(2)}–${row.p95.toFixed(2)}]` : "")
-       : "") +
-      (row.host_label ? ' <span class="badge">known host</span>' : "") +
-      (row.review ? ' <span class="badge">flag_review</span>' : "") : "";
-    if (sel.value && META.suit_bbox) {
-      map.addSource("suit", {type:"image",
-        url: SRC+`suit_${sel.value}.png`, coordinates: META.suit_bbox});
-      map.addLayer({id:"suit", type:"raster", source:"suit",
-        paint:{"raster-opacity":0.65}}, "ctyFill");
-    }
-  };
+    // Decision Delta Card
+    fetch("/decisions").then(r=>r.json()).then(d => {
+      const dStat = document.getElementById("dstat");
+      const dList = document.getElementById("dlist");
+      if (dStat) {
+        const cs = Object.entries(d.counts||{}).map(([k,v])=>`${v} ${k}`).join(" · ");
+        dStat.textContent = `${(d.rows||[]).length} species: ${cs} · ${d.switches} switch_to → ${d.refit_queue}`;
+      }
+      if (dList) {
+        const rows = d.rows || [];
+        const col = {"accept":"#3fb950", "flag_review":"#d29922", "drop":"#f85149"};
+        const renderDecisions = count => {
+          const items = rows.slice(0, count).map(r =>
+            `<div style="margin:3px 0;"><span style="color:${col[r.decision]||'#8b949e'};font-weight:500;">` +
+            `${esc(r.decision)}</span> ${esc(r.species)}` +
+            (r.switch_to && r.switch_to!=="none" ? ` <b>⇒ ${esc(r.switch_to)}</b>` : "") +
+            ` <span class="sub">${esc(String(r.why||"").slice(0,80))}</span></div>`
+          ).join("");
+          const btn = (rows.length > 5) ?
+            `<button type="button" class="more-btn" id="d-toggle-btn">${count <= 5 ? `Show all ${rows.length}` : 'Show less'}</button>` : '';
+          dList.innerHTML = items + btn;
+          const toggle = document.getElementById("d-toggle-btn");
+          if (toggle) {
+            toggle.onclick = () => renderDecisions(count <= 5 ? rows.length : 5);
+          }
+        };
+        renderDecisions(5);
+      }
+    }).catch(() => {
+      const dStat = document.getElementById("dstat");
+      if (dStat) dStat.textContent = "decision delta unavailable";
+    }),
 
-  // --- toggles -------------------------------------------------------
-  const vis = (id, ck) =>
-    document.getElementById(ck).onchange = e => {
-      if (map.getLayer(id))
-        map.setLayoutProperty(id, "visibility",
-          e.target.checked ? "visible" : "none");
+    // Species drill-down dropdown
+    fetch("/species?limit=1200").then(r=>r.json()).then(sp => {
+      const sel = document.getElementById("spSel");
+      const head = document.getElementById("spHead");
+      if (head) head.textContent = `species drill-down (${sp.length} modelled)`;
+      if (sel) {
+        (Array.isArray(sp) ? sp : []).forEach(r => {
+          const o = document.createElement("option");
+          o.value = r.specieskey;
+          o.textContent = r.species + (r.review ? " ⚠" : "");
+          sel.appendChild(o);
+        });
+        sel.onchange = () => handleSpeciesSelect(sp, sel.value);
+      }
+    }).catch(() => {
+      const head = document.getElementById("spHead");
+      if (head) head.textContent = "species drill-down (unavailable)";
+    }),
+
+    // Susceptibility distribution (fetch top=1000 once)
+    fetch("/susceptibility?top=1000").then(r=>r.json()).then(sus => {
+      if (Array.isArray(sus) && sus.length > 0) {
+        renderSusDistribution(sus);
+      }
+    }).catch(() => {})
+  ]);
+
+  // Reservoir raster changer
+  function setRsv(mode) {
+    if (map.getLayer("rsv")) map.removeLayer("rsv");
+    if (map.getSource("rsv")) map.removeSource("rsv");
+    if (!META.suit_bbox) return;
+    map.addSource("rsv", {type:"image",
+      url: SRC+`reservoir_${mode}.png`, coordinates: META.suit_bbox});
+    map.addLayer({id:"rsv", type:"raster", source:"rsv",
+      layout:{visibility: document.getElementById("ckRsv")?.checked ? "visible" : "none"},
+      paint:{"raster-opacity":0.65}}, "ctyFill");
+  }
+  const rsvModeSel = document.getElementById("rsvMode");
+  if (rsvModeSel) rsvModeSel.onchange = e => setRsv(e.target.value);
+
+  // Layer visibility bindings
+  const vis = (id, ck) => {
+    const el = document.getElementById(ck);
+    if (!el) return;
+    el.onchange = e => {
+      if (map.getLayer(id)) {
+        map.setLayoutProperty(id, "visibility", e.target.checked ? "visible" : "none");
+      }
     };
-  vis("riskFill","ckRisk"); vis("ctyFill","ckCty"); vis("rsv","ckRsv");
-  vis("detPt","ckDet");  vis("flockPt","ckFlock"); vis("flyLine","ckFly");
-
-  // poultry vs dairy exposure field toggle
-  const ctyPaint = v => ["interpolate",["linear"],["get",v],
-    0,"#fee8c8", 1,"#e34a33"];
-  document.getElementById("ctyMode").onchange = e => {
-    if (map.getLayer("ctyFill"))
-      map.setPaintProperty("ctyFill", "fill-color",
-        ctyPaint(e.target.value));
   };
+  vis("riskFill","ckRisk");
+  vis("ctyFill","ckCty");
+  vis("rsv","ckRsv");
+  vis("detPt","ckDet");
+  vis("flockPt","ckFlock");
+  vis("flyLine","ckFly");
 
-  // detection time filter
-  document.getElementById("detYear").oninput = e => {
-    const y = e.target.value;
-    document.getElementById("detYearLbl").textContent = `through ${y}`;
-    if (map.getLayer("detPt"))
-      map.setFilter("detPt",
-        ["<=", ["get","year"], ["to-number", y]]);
-  };
+  // County paint toggle (poultry vs dairy exposure)
+  const ctyPaint = v => ["interpolate",["linear"],["get",v], 0,"#fee8c8", 1,"#e34a33"];
+  const ctyModeSel = document.getElementById("ctyMode");
+  if (ctyModeSel) {
+    ctyModeSel.onchange = e => {
+      if (map.getLayer("ctyFill")) {
+        map.setPaintProperty("ctyFill", "fill-color", ctyPaint(e.target.value));
+      }
+    };
+  }
 
-  // --- click → watershed/county card ---------------------------------
+  // Detection year filter
+  const detYearInput = document.getElementById("detYear");
+  if (detYearInput) {
+    detYearInput.oninput = e => {
+      const y = e.target.value;
+      const lbl = document.getElementById("detYearLbl");
+      if (lbl) lbl.textContent = `through ${y}`;
+      if (map.getLayer("detPt")) {
+        map.setFilter("detPt", ["<=", ["get","year"], ["to-number", y]]);
+      }
+    };
+  }
+
+  // Map click interaction
   map.on("click", async e => {
     const card = document.getElementById("clickcard");
-    const det = map.queryRenderedFeatures(e.point,
-      {layers:["detPt"]})[0];
+    if (!card) return;
+
+    // Check det point layer
+    const det = map.queryRenderedFeatures(e.point, {layers:["detPt"]})[0];
     if (det) {
       const p = det.properties;
       card.style.display = "block";
-      document.getElementById("ccTitle").textContent =
-        p.species ? `HPAI+ ${p.species}` : "HPAI+ detection";
-      document.getElementById("ccSub").textContent =
-        `${p.county}, ${p.state} · ${String(p.date).slice(0,10)}` +
-        (p.strain ? ` · ${p.strain}` : "");
-      document.getElementById("ccBody").textContent =
-        "confirmed HPAI detection (NWHC/APHIS)";
+      document.getElementById("ccTitle").textContent = p.species ? `HPAI+ ${p.species}` : "HPAI+ detection";
+      document.getElementById("ccSub").textContent = `${p.county}, ${p.state} · ${String(p.date).slice(0,10)}` + (p.strain ? ` · ${p.strain}` : "");
+      document.getElementById("ccBody").textContent = "confirmed HPAI detection (NWHC/APHIS)";
       return;
     }
-    const feat = map.queryRenderedFeatures(e.point,
-      {layers:["ctyFill"]})[0];
+
+    // Check county fill layer
+    const feat = map.queryRenderedFeatures(e.point, {layers:["ctyFill"]})[0];
     if (feat) {
       const p = feat.properties;
       card.style.display = "block";
-      document.getElementById("ccTitle").textContent =
-        `${p.name} Co., ${p.state}`;
-      document.getElementById("ccSub").textContent =
-        `poultry exposure ${p.exposure} · dairy exposure ` +
-        `${p.dairy_exposure ?? 0}`;
+      document.getElementById("ccTitle").textContent = `${p.name} Co., ${p.state}`;
+      document.getElementById("ccSub").textContent = `poultry exposure ${p.exposure} · dairy exposure ${p.dairy_exposure ?? 0}`;
       document.getElementById("ccBody").textContent =
         `mean risk ${p.mean_risk} · ${p.events} flock confirmations · ` +
         `${Number(p.birds_affected).toLocaleString()} birds affected · ` +
-        `${p.dairy_events ?? 0} dairy events ` +
-        `(${Number(p.dairy_herds ?? 0).toLocaleString()} herds, state-level)`;
+        `${p.dairy_events ?? 0} dairy events (${Number(p.dairy_herds ?? 0).toLocaleString()} herds, state-level)`;
       return;
     }
-    card.style.display = "none";
+
+    // Check flock point layer
+    const flock = map.queryRenderedFeatures(e.point, {layers:["flockPt"]})[0];
+    if (flock) {
+      const p = flock.properties;
+      card.style.display = "block";
+      document.getElementById("ccTitle").textContent = `Flock: ${p.county || 'Unknown'}, ${p.state || ''}`;
+      document.getElementById("ccSub").textContent = `${Number(p.birds_affected || 0).toLocaleString()} birds affected · ${String(p.confirmed || '').slice(0,10)}`;
+      document.getElementById("ccBody").textContent = `Production type: ${p.production || 'Commercial / Backyard'}`;
+      return;
+    }
+
+    // Check if any queryable layers are active
+    const activeLayers = ["ctyFill", "detPt", "flockPt"].some(id => {
+      const l = map.getLayer(id);
+      return l && map.getLayoutProperty(id, "visibility") !== "none";
+    });
+
+    if (!activeLayers) {
+      card.style.display = "block";
+      document.getElementById("ccTitle").textContent = "No active layer at click";
+      document.getElementById("ccSub").textContent = "Enable a layer to inspect (detections, exposure, or flocks)";
+      document.getElementById("ccBody").textContent = "";
+    } else {
+      card.style.display = "none";
+    }
   });
 }
 
-async function explainWatershed(huc) {
+// Species drill-down selection with P(host) gauge bar & whiskers
+function handleSpeciesSelect(spList, key) {
+  if (map.getLayer("suit")) map.removeLayer("suit");
+  if (map.getSource("suit")) map.removeSource("suit");
+
+  const row = (Array.isArray(spList) ? spList : []).find(r => String(r.specieskey) === String(key));
+  const selEl = document.getElementById("sel");
+  const noticeEl = document.getElementById("rasterNotice");
+  if (noticeEl) noticeEl.style.display = "none";
+
+  if (!row) {
+    if (selEl) selEl.innerHTML = "";
+    return;
+  }
+
+  let gaugeHtml = "";
+  if (row.p_host != null) {
+    const p = Math.max(0, Math.min(1, Number(row.p_host)));
+    const p05 = Math.max(0, Math.min(1, row.p05 ?? p));
+    const p95 = Math.max(0, Math.min(1, row.p95 ?? p));
+    const pLeft = (p * 100).toFixed(1);
+    const wLeft = (p05 * 100).toFixed(1);
+    const wWidth = Math.max(1, ((p95 - p05) * 100)).toFixed(1);
+
+    gaugeHtml = `
+      <div style="margin:6px 0 2px;">
+        <span style="font-size:10px;color:var(--text-muted);">P(host) gauge (5%–95% whiskers):</span>
+        <div class="gauge-wrap" title="P(host) = ${p.toFixed(2)} [90% CI: ${p05.toFixed(2)}–${p95.toFixed(2)}]">
+          <div class="gauge-whisker" style="left:${wLeft}%;width:${wWidth}%;"></div>
+          <div class="gauge-point" style="left:${pLeft}%;"></div>
+        </div>
+      </div>`;
+  }
+
+  const hostBadge = row.host_label ?
+    ' <span class="badge badge-green" title="Confirmed host from empirical literature or official agency record">known host</span>' : '';
+  const revBadge = row.review ?
+    ' <span class="badge badge-amber" title="Requires manual inspection: flagged by automated model triage or ecological threshold">flag_review</span>' : '';
+
+  if (selEl) {
+    selEl.innerHTML = `
+      <div style="margin-bottom:4px;"><b>${esc(row.species)}</b> · ${esc(row.best_temp)} × ${esc(row.best_prec)}${hostBadge}${revBadge}</div>
+      ${row.p_host != null ? `<div><b>P(host)=${Number(row.p_host).toFixed(2)}</b> <span class="sub">[${Number(row.p05 ?? row.p_host).toFixed(2)}–${Number(row.p95 ?? row.p_host).toFixed(2)}]</span></div>` : ""}
+      ${gaugeHtml}
+    `;
+  }
+
+  // Preload species raster with Image() onload/onerror
+  if (key && META.suit_bbox) {
+    const imgUrl = SRC + `suit_${key}.png`;
+    const preloader = new Image();
+    preloader.onload = () => {
+      if (document.getElementById("spSel")?.value === String(key)) {
+        if (map.getLayer("suit")) map.removeLayer("suit");
+        if (map.getSource("suit")) map.removeSource("suit");
+        map.addSource("suit", {type:"image", url: imgUrl, coordinates: META.suit_bbox});
+        map.addLayer({id:"suit", type:"raster", source:"suit", paint:{"raster-opacity":0.65}}, "ctyFill");
+      }
+    };
+    preloader.onerror = () => {
+      if (noticeEl) {
+        noticeEl.textContent = "no raster for this species";
+        noticeEl.style.display = "block";
+      }
+    };
+    preloader.src = imgUrl;
+  }
+}
+
+// Susceptibility 20-bin SVG Histogram
+function renderSusDistribution(susData) {
+  const container = document.getElementById("sus-dist");
+  const svgWrap = document.getElementById("sus-svg");
+  if (!container || !svgWrap) return;
+
+  const probs = susData.map(d => d.p_host).filter(p => p != null && !isNaN(p));
+  if (probs.length === 0) return;
+
+  const bins = new Array(20).fill(0);
+  probs.forEach(p => {
+    let b = Math.floor(p * 20);
+    if (b >= 20) b = 19;
+    if (b < 0) b = 0;
+    bins[b]++;
+  });
+
+  const maxCount = Math.max(...bins, 1);
+  const w = 290, h = 48, barW = 12;
+  const barsSvg = bins.map((c, i) => {
+    const barH = Math.max(1, Math.round((c / maxCount) * (h - 12)));
+    const x = i * 14 + 5;
+    const y = h - barH - 10;
+    const binRange = `${(i*0.05).toFixed(2)}–${((i+1)*0.05).toFixed(2)}`;
+    return `<rect x="${x}" y="${y}" width="${barW}" height="${barH}" fill="#58a6ff" opacity="0.8" rx="1"><title>P(host) ${binRange}: ${c} spp</title></rect>`;
+  }).join("");
+
+  svgWrap.innerHTML = `
+    <svg width="${w}" height="${h}" style="display:block;">
+      ${barsSvg}
+      <line x1="5" y1="${h-9}" x2="${w-5}" y2="${h-9}" stroke="#30363d" stroke-width="1"/>
+      <text x="5" y="${h-1}" font-size="8" fill="#8b949e">0.0</text>
+      <text x="${w/2 - 8}" y="${h-1}" font-size="8" fill="#8b949e">0.5</text>
+      <text x="${w-20}" y="${h-1}" font-size="8" fill="#8b949e">1.0</text>
+    </svg>
+  `;
+  container.style.display = "block";
+}
+
+// Detections/year Sparkline from querySourceFeatures("det")
+function renderDetSparkline(feats) {
+  const container = document.getElementById("det-sparkline");
+  if (!container) return;
+
+  const yearCounts = {2022:0, 2023:0, 2024:0, 2025:0, 2026:0};
+  feats.forEach(f => {
+    const p = f.properties || {};
+    let y = p.year;
+    if (!y && p.date) {
+      y = parseInt(String(p.date).slice(0, 4), 10);
+    }
+    if (y && yearCounts[y] !== undefined) yearCounts[y]++;
+  });
+
+  const counts = [yearCounts[2022], yearCounts[2023], yearCounts[2024], yearCounts[2025], yearCounts[2026]];
+  const maxC = Math.max(...counts, 1);
+  const w = 55, h = 14;
+  const pts = counts.map((c, i) => {
+    const x = Math.round(i * (w / 4));
+    const y = Math.round(h - 2 - (c / maxC) * (h - 4));
+    return `${x},${y}`;
+  }).join(" ");
+
+  container.innerHTML = `
+    <span class="sub" style="font-size:10px;" title="Detections sparkline 2022-2026">trend:</span>
+    <svg width="${w}" height="${h}" title="2022-2026 detections trend (${counts.join(', ')})">
+      <polyline fill="none" stroke="#f781bf" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" points="${pts}"/>
+    </svg>
+  `;
+}
+
+// Explain watershed & smooth flyTo
+async function explainWatershed(huc, statesStr) {
+  // Attempt flyTo state bounding box if available
+  if (statesStr) {
+    const states = statesStr.split(",").map(s => s.trim());
+    let bounds = null;
+    states.forEach(st => {
+      if (STATE_BBOXES[st]) {
+        if (!bounds) bounds = [...STATE_BBOXES[st]];
+        else {
+          bounds[0] = Math.min(bounds[0], STATE_BBOXES[st][0]);
+          bounds[1] = Math.min(bounds[1], STATE_BBOXES[st][1]);
+          bounds[2] = Math.max(bounds[2], STATE_BBOXES[st][2]);
+          bounds[3] = Math.max(bounds[3], STATE_BBOXES[st][3]);
+        }
+      }
+    });
+    if (bounds) {
+      try {
+        map.fitBounds([[bounds[0], bounds[1]], [bounds[2], bounds[3]]], {padding: 40, maxZoom: 8, duration: 1200});
+      } catch(e) {}
+    }
+  }
+
   const card = document.getElementById("clickcard");
+  if (!card) return;
   card.style.display = "block";
   document.getElementById("ccTitle").textContent = "loading…";
+  document.getElementById("ccSub").textContent = "";
+  document.getElementById("ccBody").innerHTML = "";
+
   try {
-    const e = await fetch(`/explain/watershed/${huc}`).then(r=>r.json());
+    const e = await fetch(`/explain/watershed/${encodeURIComponent(huc)}`).then(r=>r.json());
     const b = e.brief || {};
-    document.getElementById("ccTitle").textContent =
-      b.headline || `watershed ${huc}`;
-    document.getElementById("ccSub").textContent =
-      b.risk_level ? `priority: ${b.risk_level}` : "";
+    document.getElementById("ccTitle").textContent = b.headline || `Watershed ${huc}`;
+    document.getElementById("ccSub").textContent = b.risk_level ? `Priority: ${b.risk_level}` : "";
     document.getElementById("ccBody").innerHTML =
-      (b.drivers || []).map(d=>"• "+esc(d)).join("<br>") +
-      (b.sampling_rec ? `<br><br>${esc(b.sampling_rec)}` : "");
+      (b.drivers || []).map(d => `<div style="margin:2px 0;">• ${esc(d)}</div>`).join("") +
+      (b.sampling_rec ? `<div style="margin-top:6px;color:var(--text-muted);">${esc(b.sampling_rec)}</div>` : "");
   } catch(err) {
     document.getElementById("ccTitle").textContent = "explain unavailable";
   }
 }
+
 map.on("load", load);
 </script>
-<footer style="position:fixed;bottom:0;left:0;right:0;padding:4px 10px;
- font:11px/1.4 sans-serif;color:#888;background:#ffffffee;z-index:1000;
- text-align:center">WildSeek is an ecological surveillance research tool
- for wildlife professionals. Not medical advice, not for personal health
- decisions.</footer>
 </body>
 </html>
