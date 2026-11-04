@@ -113,7 +113,7 @@
   </div>
 
   <details>
-    <summary>species drill-down (1,147 modelled)</summary>
+    <summary id="spHead">species drill-down</summary>
     <select id="spSel"><option value="">— pick species —</option></select>
     <div class="stat" id="sel"></div>
   </details>
@@ -317,6 +317,8 @@ async function load() {
   // --- species drill-down -------------------------------------------
   const sel = document.getElementById("spSel");
   const sp = await fetch("/species?limit=1200").then(r=>r.json()).catch(()=>[]);
+  document.getElementById("spHead").textContent =
+    `species drill-down (${sp.length} modelled)`;
   (Array.isArray(sp) ? sp : []).forEach(r => {
     const o = document.createElement("option");
     o.value = r.specieskey;
