@@ -352,6 +352,7 @@ const ccOpen = card => {
   if (ccKeyboard) { const x = document.getElementById("ccClose"); if (x) x.focus({preventScroll:true}); }
 };
 const ccDismiss = card => {
+  explainSeq++;
   if (card) card.style.display = "none";
   document.querySelectorAll(".wsrow.active").forEach(a => { a.classList.remove("active"); a.setAttribute("aria-pressed", "false"); });
   if (ccReturnTo && ccReturnTo.isConnected) ccReturnTo.focus({preventScroll:true});
@@ -818,6 +819,7 @@ async function load() {
   map.on("click", async e => {
     const card = document.getElementById("clickcard");
     if (!card) return;
+    explainSeq++; // map-picked card supersedes a pending watershed explain
 
     // Check det point layer
     const det = map.getLayer("detPt") ? map.queryRenderedFeatures(e.point, {layers:["detPt"]})[0] : null;
@@ -1013,7 +1015,9 @@ function renderDetSparkline(feats) {
 }
 
 // Explain watershed & smooth flyTo
+let explainSeq = 0;
 async function explainWatershed(huc, statesStr) {
+  const seq = ++explainSeq;
   // Attempt flyTo state bounding box if available
   if (statesStr) {
     const states = statesStr.split(",").map(s => s.trim());
@@ -1045,6 +1049,7 @@ async function explainWatershed(huc, statesStr) {
 
   try {
     const e = await fetch(`/explain/watershed/${encodeURIComponent(huc)}`).then(r=>r.json());
+    if (seq !== explainSeq) return; // superseded by a newer pick, map click, or dismiss
     const b = e.brief || {};
     document.getElementById("ccTitle").textContent = b.headline || `Watershed ${huc}`;
     document.getElementById("ccSub").textContent = b.risk_level ? `Priority: ${b.risk_level}` : "";
@@ -1052,7 +1057,7 @@ async function explainWatershed(huc, statesStr) {
       (b.drivers || []).map(d => `<div style="margin:2px 0;">• ${esc(d)}</div>`).join("") +
       (b.sampling_rec ? `<div style="margin-top:6px;color:var(--text-muted);">${esc(b.sampling_rec)}</div>` : "");
   } catch(err) {
-    document.getElementById("ccTitle").textContent = "explain unavailable";
+    if (seq === explainSeq) document.getElementById("ccTitle").textContent = "explain unavailable";
   }
 }
 
