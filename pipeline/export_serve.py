@@ -167,12 +167,15 @@ def main(src: str, dst: str) -> None:
 
     suits = list(Path(src).glob("suit_*.png"))
     suits += list((Path(src) / "suit_png").glob("suit_*.png"))
-    # dst hygiene: drop suit_* that no longer exist in src (e.g. species
-    # skipped by M-masking would otherwise stay stale from a prior export)
-    keep = {s.name for s in suits} | {s.name + ".meta.json" for s in suits}
-    for stale in d.glob("suit_*.png*"):
-        if stale.name not in keep:
-            stale.unlink()
+    if suits:
+        # dst hygiene: drop suit_* that no longer exist in src (e.g.
+        # species skipped by M-masking). Only when src ships renders —
+        # a src without any means they are frozen layers, not stale.
+        keep = {s.name for s in suits} | \
+               {s.name + ".meta.json" for s in suits}
+        for stale in d.glob("suit_*.png*"):
+            if stale.name not in keep:
+                stale.unlink()
     n_cat = None
     if win.exists():
         try:
@@ -190,6 +193,15 @@ def main(src: str, dst: str) -> None:
             if sm.exists():
                 (d / (s.name + ".meta.json")).write_bytes(sm.read_bytes())
 
+    # frozen-layer keys (risk/reservoir/suit bboxes, n_species) survive:
+    # a casa refresh regenerates only what src provides, the rest of the
+    # serve state carries forward from the dst meta being overwritten
+    prev = {}
+    try:
+        prev = json.loads((d / "meta.json").read_text())
+    except Exception:  # noqa: BLE001
+        pass
+    meta = {**prev, **{k: v for k, v in meta.items() if v is not None}}
     (d / "meta.json").write_text(json.dumps(meta, indent=1))
     print("exported to", d)
     con.close()
