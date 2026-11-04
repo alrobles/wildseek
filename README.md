@@ -88,6 +88,38 @@ Pre-hackathon baseline lives in upstream repos predating the event
 2026-09-16; phyloseek-devel/geoseek-devel are unversioned lab code —
 see NEW.md); work submitted here was built during Oct 26 – Nov 4, 2026.
 
+## Repo map — what is what
+
+```
+alrobles/meta-hack  (THIS REPO — everything built Oct 26 – Nov 4)
+├── pipeline/   data build: GBIF pools → M masks → env cube →
+│               101k-fit campaign → risk (HUC8 + county) → serve export
+├── agent/      Meta Model API layer: typed triage, 49-verdict delta,
+│               QA quorum 3/4 + cost veto, briefing, extraction
+├── litmine/    literature edge factory: PMC full text → triage →
+│               typed edges → judge-verified ($0.0014/edge)
+├── api/        FastAPI monitor service
+├── app/        MapLibre frontend (single file)
+└── serve/      docker compose — one-command demo (data.sample incl.)
+
+pre-existing deps (released/lab infra — full ledger in NEW.md)
+├── xnicher v1.0.0 (CRAN, 2026-09-06)      niche-fitting engine
+├── oneearthr v1.0.0 (2026-09-16)          RESOLVE ecoregions → M
+├── phyloseek-devel (lab, unversioned)     dated mammal tree v6
+├── ecoseek / geoseek stack (ecoseek.org)  serving platform
+└── xsdm_pipeline .sif (HPC)               R/terra/duckdb container
+
+public data (cited, not ours)
+├── GBIF mirror (1/120° dedup) · ERA5 bioclim normals
+├── USDA APHIS hub (HPAI detections, flock events)
+├── BirdTree Stage2 Ericson + AVONET crosswalk
+└── PMC Open Access + OpenAlex (literature corpus)
+
+companion (event work, outside this snapshot)
+└── wildseek-lora — SFT trajectories for a Glimmer pipeline
+    orchestrator (private dev repo)
+```
+
 ## Layout
 
 | Dir | What |
