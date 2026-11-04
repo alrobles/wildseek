@@ -17,6 +17,8 @@ Usage:
   tools/fw_distill.py install <run_dir> <eval_name>   # eval/<eval_name>.json
   tools/fw_distill.py rescore <run_dir>               # semantic rescore of
                                                       # string-field misses
+  tools/fw_distill.py lint    <run_dir> | <train.jsonl> <holdout.jsonl>
+                                                      # pre-launch dataset audit
 """
 
 import json
@@ -37,6 +39,73 @@ TOL = 1e-9
 SEM_F1 = 0.7
 SEM_NUM = 0.8
 NUM_RTOL = 0.01
+
+# lint thresholds — learned on the wildseek-all-20261104-0017 autopsy:
+# the starter carved its 40-row holdout out of the train pool (all 40 rows
+# verbatim in fw_all_train_max4k, near-dup siblings left behind), triage
+# train ran 63% relevant:false, one paper (pmid 19785757) held 63 near-dup
+# caption chunks, and the only 2 truncated eval rows had gold > 1600 chars
+# vs 473 for the longest clean row.
+LEAK_J = 0.7      # holdout-vs-train token-Jaccard = cross-split leak
+DUP_J = 0.7       # train-vs-train Jaccard = paper-level over-representation
+MINOR_FLOOR = 0.4  # binary task minority share below this = skewed prior
+LONG_GOLD = 1200   # assistant gold chars = eval truncation risk
+
+
+def _task(row: dict) -> str:
+    try:
+        g = json.loads(row["messages"][-1]["content"])
+    except (KeyError, IndexError, json.JSONDecodeError, TypeError):
+        return "other"
+    if isinstance(g, list):
+        return "relations"
+    if not isinstance(g, dict):
+        return "other"
+    if "hosts" in g:
+        return "chunk_pos" if g.get("relevant") else "chunk_neg"
+    if "decision" in g:
+        return "triage"
+    return "other"
+
+
+def _tokset(row: dict) -> frozenset:
+    try:
+        u = row["messages"][1]["content"]
+    except (KeyError, IndexError, TypeError):
+        return frozenset()
+    return frozenset(re.findall(r"[a-z0-9]+", u.lower()))
+
+
+def _user_text(row: dict) -> str:
+    try:
+        return " ".join(row["messages"][1]["content"].split())
+    except (KeyError, IndexError, TypeError, AttributeError):
+        return ""
+
+
+def _jaccard(a: frozenset, b: frozenset) -> float:
+    if not a or not b:
+        return 0.0
+    return len(a & b) / len(a | b)
+
+
+def _near_pairs(small: list[tuple[int, frozenset]],
+                big: list[tuple[int, frozenset]],
+                thresh: float) -> list[tuple[int, int, float]]:
+    """(small_idx, big_idx, j) for every pair scoring >= thresh.
+
+    Size-ratio prefilter: jaccard <= min(|a|,|b|)/max(|a|,|b|), so pairs
+    whose sizes can't reach thresh are skipped before the set algebra.
+    """
+    out = []
+    for i, a in small:
+        for j, b in big:
+            if min(len(a), len(b)) < thresh * max(len(a), len(b)):
+                continue
+            s = _jaccard(a, b)
+            if s >= thresh:
+                out.append((i, j, round(s, 3)))
+    return out
 
 
 def _jsonl(path: Path) -> list[dict]:
@@ -204,6 +273,125 @@ def rescore(preds: list[dict]) -> dict:
     }
 
 
+def _base(task: str) -> str:
+    return "chunk" if task.startswith("chunk_") else task
+
+
+def lint(train: list[dict], hold: list[dict]) -> dict:
+    """Pre-launch audit of a train/holdout pair — facts + warnings.
+
+    Catches the wildseek-all failure modes: holdout carved from the train
+    pool (exact + near-dup leak), duplicate rows inside train, binary-task
+    class skew, paper-level near-dup concentration, and gold outputs long
+    enough to truncate under the eval sampling budget.
+    """
+    ttask = [_task(r) for r in train]
+    htask = [_task(r) for r in hold]
+    warn: list[str] = []
+
+    counts = {"train": dict(Counter(ttask)), "holdout": dict(Counter(htask))}
+
+    # binary-task class balance: minority share of the +/- split
+    for split, tasks in (("train", ttask), ("holdout", htask)):
+        pos = tasks.count("chunk_pos")
+        n = pos + tasks.count("chunk_neg")
+        if n and min(pos, n - pos) / n < MINOR_FLOOR:
+            warn.append(f"{split} chunk minority share "
+                        f"{min(pos, n - pos) / n:.2f} ({pos}/{n} pos) "
+                        f"< {MINOR_FLOOR} — skewed label prior")
+
+    # exact duplicate rows inside train (normalized user+assistant)
+    seen: dict[tuple, int] = {}
+    dups = []
+    for i, r in enumerate(train):
+        try:
+            key = (_user_text(r), " ".join(
+                r["messages"][-1]["content"].split()))
+        except (KeyError, IndexError, TypeError, AttributeError):
+            continue
+        if key in seen:
+            dups.append((seen[key], i))
+        else:
+            seen[key] = i
+    if dups:
+        warn.append(f"{len(dups)} exact-duplicate rows inside train "
+                    f"(first copies at {[d[0] for d in dups[:5]]})")
+
+    # cross-split leak: holdout user text vs same-task train rows
+    tsets: dict[str, list[tuple[int, frozenset]]] = {}
+    for i, r in enumerate(train):
+        tsets.setdefault(_base(ttask[i]), []).append((i, _tokset(r)))
+    leak = []
+    for h, r in enumerate(hold):
+        cand = tsets.get(_base(htask[h]), [])
+        u = _user_text(r)
+        exact = [i for i, _ in cand
+                 if _user_text(train[i]) == u] if u else []
+        near = _near_pairs([(h, _tokset(r))], cand, LEAK_J)
+        near = [(i, j) for _, i, j in near if i not in exact]
+        if exact:
+            leak.append({"holdout": h, "train": exact, "exact": True})
+            warn.append(f"holdout {h} verbatim in train {exact} — "
+                        f"cross-split leak")
+        if near:
+            leak.append({"holdout": h, "train": [i for i, _ in near],
+                         "j": max(j for _, j in near), "exact": False})
+            warn.append(f"holdout {h} near-dup of train {[i for i, _ in near]} "
+                        f"(J={max(j for _, j in near):.2f})")
+
+    # intra-train near-dup concentration per task (paper-level prior proxy)
+    clusters = {}
+    for b, cand in tsets.items():
+        if len(cand) < 2:
+            continue
+        pairs = [p for p in _near_pairs(cand, cand, DUP_J) if p[0] < p[1]]
+        if pairs:
+            rows = {i for p in pairs for i in p[:2]}
+            clusters[b] = {"rows": len(rows), "pairs": len(pairs)}
+            warn.append(f"train {b}: {len(rows)} rows in {len(pairs)} "
+                        f"near-dup pairs (J>={DUP_J}) — paper-level "
+                        f"over-representation")
+
+    # gold outputs long enough to truncate under the eval sampling budget
+    long_gold = []
+    for split, rows in (("train", train), ("holdout", hold)):
+        for i, r in enumerate(rows):
+            try:
+                n = len(r["messages"][-1]["content"])
+            except (KeyError, IndexError, TypeError):
+                continue
+            if n > LONG_GOLD:
+                long_gold.append({"split": split, "index": i, "chars": n})
+    if long_gold:
+        hg = [g["index"] for g in long_gold if g["split"] == "holdout"]
+        if hg:
+            warn.append(f"holdout gold >{LONG_GOLD} chars at {hg} — "
+                        f"eval truncation risk")
+
+    return {"counts": counts, "train_dups": dups, "leaks": leak,
+            "train_clusters": clusters, "long_gold": long_gold,
+            "warnings": warn}
+
+
+def cmd_lint(args: list[str]) -> int:
+    if len(args) == 1 and Path(args[0]).is_dir():
+        run = Path(args[0])
+        train = _jsonl(run / "train.jsonl")
+        hold = _jsonl(run / "holdout.jsonl")
+    elif len(args) == 2:
+        train, hold = _jsonl(Path(args[0])), _jsonl(Path(args[1]))
+    else:
+        sys.exit(__doc__)
+    r = lint(train, hold)
+    for split, c in r["counts"].items():
+        print(f"{split}: "
+              + "  ".join(f"{k}={v}" for k, v in sorted(c.items())))
+    for w in r["warnings"]:
+        print("WARN:", w)
+    print(f"{len(r['warnings'])} warnings")
+    return 1 if r["warnings"] else 0
+
+
 def cmd_rescore(run: Path) -> int:
     tuned = _jsonl(run / "predictions_tuned.jsonl")
     r = rescore(tuned)
@@ -252,9 +440,12 @@ def cmd_install(run: Path, name: str) -> int:
 
 
 if __name__ == "__main__":
-    if len(sys.argv) < 3 or sys.argv[1] not in ("check", "install", "rescore"):
+    if len(sys.argv) < 3 or sys.argv[1] not in ("check", "install",
+                                               "rescore", "lint"):
         sys.exit(__doc__)
     if sys.argv[1] == "rescore":
         sys.exit(cmd_rescore(Path(sys.argv[2])))
+    if sys.argv[1] == "lint":
+        sys.exit(cmd_lint(sys.argv[2:]))
     sys.exit(cmd_check(Path(sys.argv[2])) if sys.argv[1] == "check"
              else cmd_install(Path(sys.argv[2]), sys.argv[3]))

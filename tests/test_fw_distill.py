@@ -190,3 +190,72 @@ def test_rescore_bool_field_not_semantic():
     r = fd.rescore([_pred(0, gold, ans)])
     assert r["field_accuracy_semantic"]["relevant"] == 0.0
     assert r["exact_match_semantic"] == 0.0
+
+
+def _chat(user, assistant, sysp="sys"):
+    return {"messages": [{"role": "system", "content": sysp},
+                         {"role": "user", "content": user},
+                         {"role": "assistant", "content": assistant}]}
+
+
+def _chunk(user, relevant=True):
+    return _chat(user, json.dumps({"relevant": relevant, "hosts": "bats",
+                                   "parasites": "ZEBOV"}))
+
+
+def test_lint_clean_pair_no_warnings():
+    vocab = ["alpha beta gamma", "delta epsilon zeta", "eta theta iota",
+             "kappa lambda mu", "nu xi omicron", "pi rho sigma",
+             "tau upsilon phi", "chi psi omega", "lorem ipsum dolor",
+             "sit amet consectetur"]
+    train = [_chunk(f"distinct narrative {v} number {i}",
+                    relevant=bool(i % 2)) for i, v in enumerate(vocab)]
+    hold = [_chunk("unseen vocabulary quartz jasper onyx", relevant=False),
+            _chunk("fresh terms ruby emerald sapphire", relevant=True)]
+    assert fd.lint(train, hold)["warnings"] == []
+
+
+def test_lint_verbatim_and_neardup_leak():
+    leak_text = "serological status of bats captured 2003 according to site"
+    train = [_chunk(leak_text), _chunk("other narrative " + "w " * 40)]
+    hold = [_chunk(leak_text),
+            _chunk(leak_text.replace("site", "demographic parameters"))]
+    r = fd.lint(train, hold)
+    assert any("verbatim" in w for w in r["warnings"])
+    assert any("near-dup" in w for w in r["warnings"])
+    assert r["leaks"][0]["exact"] is True
+    assert r["leaks"][1]["exact"] is False
+
+
+def test_lint_class_skew_and_dups():
+    # 70% negative chunk rows -> minority 0.30 < MINOR_FLOOR; plus a
+    # verbatim duplicate row inside train (mirrors max4k pool: 14 dups)
+    train = ([_chunk(f"neg chunk {i} filler words {i}", relevant=False)
+              for i in range(7)]
+             + [_chunk(f"pos chunk {i} different terms {i}") for i in range(3)]
+             + [_chunk("neg chunk 0 filler words 0", relevant=False)])
+    r = fd.lint(train, [])
+    assert any("minority share" in w for w in r["warnings"])
+    assert any("exact-duplicate" in w for w in r["warnings"])
+    assert r["train_dups"] == [(0, 10)]
+
+
+def test_lint_long_gold_and_cluster_flag():
+    long_rel = _chat("abstract", json.dumps(
+        [{"parasite_taxid": str(i), "host_taxid": "1"} for i in range(200)]))
+    train = [long_rel] + [_chunk(f"shared boilerplate caption text {i % 2}")
+                          for i in range(4)]
+    hold = [long_rel]
+    r = fd.lint(train, hold)
+    assert any("truncation risk" in w for w in r["warnings"])
+    assert r["long_gold"][0]["index"] == 0
+    # 4 near-identical caption rows form a chunk cluster
+    assert r["train_clusters"]["chunk"]["rows"] >= 4
+
+
+def test_task_classifier():
+    assert fd._task(_chat("u", '[{"a": 1}]')) == "relations"
+    assert fd._task(_chunk("u", True)) == "chunk_pos"
+    assert fd._task(_chunk("u", False)) == "chunk_neg"
+    assert fd._task(_chat("u", '{"decision": "rank"}')) == "triage"
+    assert fd._task(_chat("u", "not json")) == "other"
