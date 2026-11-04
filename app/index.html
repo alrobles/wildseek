@@ -71,6 +71,12 @@
   .risk-track { height:3px; background:#21262d; border-radius:2px; margin-top:4px; overflow:hidden; }
   .risk-fill { height:100%; background:linear-gradient(90deg, #58a6ff, #f781bf); border-radius:2px; }
 
+  /* Loading skeletons (pulse disabled by reduced-motion rule) */
+  .skl-bar { height:8px; border-radius:3px; background:var(--border-dim); animation:skpulse 1.5s ease-in-out infinite; }
+  .wsrow.skl-row { cursor:default; }
+  .wsrow.skl-row:hover { background:none; }
+  @keyframes skpulse { 0%,100% { opacity:.4; } 50% { opacity:1; } }
+
   /* Clickcard dismiss */
   #clickcard { position:relative; }
   .cc-close { position:absolute; top:5px; right:6px; background:none; border:1px solid transparent;
@@ -124,7 +130,7 @@
 <body>
 <div id="map"></div>
 <div id="panel">
-  <h1>WildSeek — HPAI Monitor <span id="healthdot" title="Live API health status (/health)" style="display:inline-block;width:8px;height:8px;background:#888;border-radius:50%;margin-left:6px;vertical-align:middle;"></span></h1>
+  <h1>WildSeek — HPAI Monitor <span id="healthdot" title="Live API health status (/health)" role="status" aria-label="API health unknown" style="display:inline-block;width:8px;height:8px;background:#888;border-radius:50%;margin-left:6px;vertical-align:middle;"></span></h1>
   <div class="stat">Ecological surveillance for wildlife professionals — not medical advice.</div>
   <div class="stat tabular" id="meta">loading…</div>
 
@@ -175,7 +181,12 @@
   </details>
 
   <h2>Watershed watchlist</h2>
-  <div id="wslist" class="stat tabular">loading…</div>
+  <div id="wslist" class="stat tabular" aria-live="polite">
+    <div class="wsrow skl-row" aria-hidden="true"><div class="skl-bar" style="width:84%"></div><div class="skl-bar" style="width:52%;margin-top:5px"></div></div>
+    <div class="wsrow skl-row" aria-hidden="true"><div class="skl-bar" style="width:71%;animation-delay:.2s"></div><div class="skl-bar" style="width:47%;margin-top:5px;animation-delay:.2s"></div></div>
+    <div class="wsrow skl-row" aria-hidden="true"><div class="skl-bar" style="width:78%;animation-delay:.4s"></div><div class="skl-bar" style="width:60%;margin-top:5px;animation-delay:.4s"></div></div>
+    <div class="wsrow skl-row" aria-hidden="true"><div class="skl-bar" style="width:66%;animation-delay:.6s"></div><div class="skl-bar" style="width:44%;margin-top:5px;animation-delay:.6s"></div></div>
+  </div>
 
   <h2>Layers</h2>
   <div class="layer">
@@ -195,7 +206,7 @@
       <input type="checkbox" id="ckRsv">
       reservoir community
     </label>
-    <select id="rsvMode" style="margin-left:16px;font-size:11px">
+    <select id="rsvMode" style="margin-left:16px;font-size:11px" aria-label="Reservoir raster mode">
       <option value="sum">expected # hosts</option>
       <option value="prob">P(&ge;1 susceptible host)</option>
       <option value="max">strongest host</option>
@@ -206,7 +217,7 @@
       <input type="checkbox" id="ckCty">
       exposure by county
     </label>
-    <select id="ctyMode" style="margin-left:16px;font-size:11px">
+    <select id="ctyMode" style="margin-left:16px;font-size:11px" aria-label="County exposure variable">
       <option value="exposure">poultry (county)</option>
       <option value="dairy_exposure">dairy herds (state)</option>
     </select>
@@ -216,9 +227,14 @@
       <input type="checkbox" id="ckDet">
       wild-bird HPAI detections
     </label>
-    <input type="range" id="detYear" min="2022" max="2026" value="2026" step="1" title="Filter detection points up to year">
+    <div style="display:flex;align-items:center;gap:6px;">
+      <span class="stat" style="font-size:10px;margin:0;" aria-hidden="true">2022</span>
+      <input type="range" id="detYear" min="2022" max="2026" value="2026" step="1" style="flex:1;min-width:0;"
+        title="Filter detection points up to year" aria-label="Filter detections through selected year" aria-valuetext="through 2026">
+      <span class="stat" style="font-size:10px;margin:0;" aria-hidden="true">2026</span>
+    </div>
     <div class="stat tabular" style="display:flex;justify-content:space-between;align-items:center;">
-      <span id="detYearLbl">through 2026</span>
+      <span id="detYearLbl" aria-live="polite">through 2026</span>
       <span id="det-sparkline"></span>
     </div>
   </div>
@@ -244,7 +260,7 @@
 
   <details style="margin-top:10px;">
     <summary id="spHead">species drill-down</summary>
-    <select id="spSel"><option value="">— pick species —</option></select>
+    <select id="spSel" aria-label="Species drill-down selector"><option value="">— pick species —</option></select>
     <div class="stat tabular" id="sel"></div>
     <div id="rasterNotice" class="sub tabular" style="color:#d29922;margin-top:4px;display:none;"></div>
 
@@ -322,10 +338,11 @@ async function load() {
       const ok = h.status && h.status.toLowerCase()==='ok';
       healthDot.style.background = ok ? '#238636' : '#da3633';
       healthDot.title = `Live API health: ${h.status || 'unknown'} (/health)`;
+      healthDot.setAttribute('aria-label', healthDot.title);
     }
   }).catch(() => {
     const healthDot = document.getElementById('healthdot');
-    if (healthDot) { healthDot.style.background = '#8b949e'; healthDot.title = 'API health unreachable (/health)'; }
+    if (healthDot) { healthDot.style.background = '#8b949e'; healthDot.title = 'API health unreachable (/health)'; healthDot.setAttribute('aria-label', healthDot.title); }
   });
 
   // 2. Fetch META & initialize map base sources
@@ -352,6 +369,8 @@ async function load() {
     if (!META.suit_bbox) {
       const ck = document.getElementById("ckRsv");
       if (ck) ck.disabled = true;
+      const rm = document.getElementById("rsvMode");
+      if (rm) rm.disabled = true;
     }
     return meta;
   }).catch(err => {
@@ -728,6 +747,7 @@ async function load() {
       const y = e.target.value;
       const lbl = document.getElementById("detYearLbl");
       if (lbl) lbl.textContent = `through ${y}`;
+      e.target.setAttribute("aria-valuetext", `through ${y}`);
       if (map.getLayer("detPt")) {
         map.setFilter("detPt", ["<=", ["get","year"], ["to-number", y]]);
       }
