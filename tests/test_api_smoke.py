@@ -73,6 +73,37 @@ def test_briefing_nokey_degraded(tmp_path, monkeypatch):
     assert r.json().get("brief") is None
 
 
+def test_baked_json_cached_then_invalidated(tmp_path, monkeypatch):
+    import api.main as mm
+    monkeypatch.setattr(mm, "DATA", tmp_path)
+    f = tmp_path / "metrics.json"
+    f.write_text('{"v": 1}')
+    c = TestClient(app)
+    assert c.get("/metrics").json() == {"v": 1}
+    assert f in mm._BAKED
+    f.write_text('{"v": 2, "extra": "pad"}')
+    assert c.get("/metrics").json() == {"v": 2, "extra": "pad"}
+
+
+def test_baked_json_missing_503(tmp_path, monkeypatch):
+    import api.main as mm
+    monkeypatch.setattr(mm, "DATA", tmp_path)
+    assert TestClient(app).get("/litmine").status_code == 503
+
+
+def test_decisions_payload_cached(tmp_path, monkeypatch):
+    import api.main as mm
+    monkeypatch.setattr(mm, "DATA", tmp_path)
+    f = tmp_path / "decisions_delta.csv"
+    f.write_text("specieskey,decision,switch_to\n1,accept,none\n2,drop,x\n")
+    c = TestClient(app)
+    body = c.get("/decisions").json()
+    assert body["counts"] == {"accept": 1, "drop": 1}
+    assert body["switches"] == 1
+    f.write_text("specieskey,decision,switch_to\n1,accept,none\n")
+    assert c.get("/decisions").json()["counts"] == {"accept": 1}
+
+
 def test_risk_top_ok(tmp_path, monkeypatch):
     import api.main as mm
     _catalog(tmp_path)
