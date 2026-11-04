@@ -13,12 +13,18 @@ Runs locally against the exported artifact copies (or on cluster with
 """
 
 import argparse
+import gzip
 import json
 import time
 from pathlib import Path
 
 import duckdb
 import pandas as pd
+
+# api/_Precompressed serves <file>.gz when the client accepts gzip, so
+# text artifacts big enough for compression to matter get a sibling.
+_GZ_EXT = {".geojson", ".json", ".jsonl", ".csv"}
+_GZ_MIN = 200_000
 
 
 def main(src: str, dst: str) -> None:
@@ -167,12 +173,15 @@ def main(src: str, dst: str) -> None:
 
     suits = list(Path(src).glob("suit_*.png"))
     suits += list((Path(src) / "suit_png").glob("suit_*.png"))
-    # dst hygiene: drop suit_* that no longer exist in src (e.g. species
-    # skipped by M-masking would otherwise stay stale from a prior export)
-    keep = {s.name for s in suits} | {s.name + ".meta.json" for s in suits}
-    for stale in d.glob("suit_*.png*"):
-        if stale.name not in keep:
-            stale.unlink()
+    if suits:
+        # dst hygiene: drop suit_* that no longer exist in src (e.g.
+        # species skipped by M-masking). Only when src ships renders —
+        # a src without any means they are frozen layers, not stale.
+        keep = {s.name for s in suits} | \
+               {s.name + ".meta.json" for s in suits}
+        for stale in d.glob("suit_*.png*"):
+            if stale.name not in keep:
+                stale.unlink()
     n_cat = None
     if win.exists():
         try:
@@ -190,7 +199,28 @@ def main(src: str, dst: str) -> None:
             if sm.exists():
                 (d / (s.name + ".meta.json")).write_bytes(sm.read_bytes())
 
+    # frozen-layer keys (risk/reservoir/suit bboxes, n_species) survive:
+    # a casa refresh regenerates only what src provides, the rest of the
+    # serve state carries forward from the dst meta being overwritten
+    prev = {}
+    try:
+        prev = json.loads((d / "meta.json").read_text())
+    except Exception:  # noqa: BLE001
+        pass
+    meta = {**prev, **{k: v for k, v in meta.items() if v is not None}}
     (d / "meta.json").write_text(json.dumps(meta, indent=1))
+
+    # .gz siblings for the serve mount's precompressed path; stale
+    # siblings whose base file disappeared (e.g. degraded flyways)
+    # would shadow the 404, so drop them.
+    for f in list(d.iterdir()):
+        if f.suffix == ".gz":
+            if not (d / f.name[:-3]).is_file():
+                f.unlink()
+        elif f.suffix in _GZ_EXT and f.stat().st_size > _GZ_MIN:
+            gz = f.with_name(f.name + ".gz")
+            if not gz.exists() or gz.stat().st_mtime < f.stat().st_mtime:
+                gz.write_bytes(gzip.compress(f.read_bytes(), 9, mtime=0))
     print("exported to", d)
     con.close()
 

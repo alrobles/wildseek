@@ -12,17 +12,96 @@ synced from the cluster staging dir ($WILDSEEK_BEEG on the HPC side).
 import json
 import os
 import re
+import stat
 import sys
+from mimetypes import guess_type
 from pathlib import Path
 
+import anyio
 import duckdb
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
+from starlette.datastructures import Headers
+from starlette.middleware.gzip import GZipMiddleware
+from starlette.responses import FileResponse
 
 DATA = Path(os.environ.get("DATA_DIR", "app/data"))
 
 app = FastAPI(title="WildSeek", version="0.1.0")
+
+
+class _NoPathsend:
+    # Uvicorn's httptools impl negotiates http.response.pathsend (sendfile);
+    # those bodies bypass response middleware entirely, so the 18 MB
+    # flyways.geojson would stay uncompressed on prod. Strip the extension
+    # and FileResponse falls back to chunked sends, which gzip sees.
+    def __init__(self, app):
+        self.app = app
+
+    async def __call__(self, scope, receive, send):
+        if scope["type"] == "http":
+            scope.get("extensions", {}).pop("http.response.pathsend", None)
+        await self.app(scope, receive, send)
+
+
+app.add_middleware(GZipMiddleware, minimum_size=1024, compresslevel=6)
+app.add_middleware(_NoPathsend)
+
+
+class _Precompressed(StaticFiles):
+    # export_serve writes <file>.gz siblings for the heavy text
+    # artifacts; serving them verbatim moves the compress cost off the
+    # request path (a compresslevel=6 scan over 18 MB per hit). The
+    # GZip middleware passes responses that already carry
+    # Content-Encoding straight through.
+    async def get_response(self, path, scope):
+        if scope["method"] in ("GET", "HEAD") and \
+                "gzip" in Headers(scope=scope).get("accept-encoding", ""):
+            try:
+                full, st = await anyio.to_thread.run_sync(
+                    self.lookup_path, path + ".gz")
+            except (OSError, ValueError):
+                st = None
+            if st is not None and stat.S_ISREG(st.st_mode):
+                return FileResponse(
+                    full, stat_result=st, media_type=guess_type(path)[0],
+                    headers={"content-encoding": "gzip",
+                             "vary": "Accept-Encoding"})
+        return await super().get_response(path, scope)
+
+
+_BAKED: dict[Path, tuple[tuple[int, int], object]] = {}
+_MISSING = object()
+
+
+def _baked(f: Path, load):
+    """Cached load of a baked export artifact keyed on (mtime_ns, size).
+
+    Export rewrites these files in place per data drop, so the stat key
+    invalidates itself; stat-before-load can at worst cache bytes under
+    a pre-write stamp, which the next stat already misses. Returns
+    _MISSING when the file isn't there — callers keep their own
+    503/fallback semantics.
+    """
+    try:
+        st = f.stat()
+    except OSError:
+        return _MISSING
+    key = (st.st_mtime_ns, st.st_size)
+    hit = _BAKED.get(f)
+    if hit is None or hit[0] != key:
+        try:
+            obj = load(f)
+        except OSError:
+            return _MISSING
+        hit = (key, obj)
+        _BAKED[f] = hit
+    return hit[1]
+
+
+def _json_file(f: Path):
+    return json.loads(f.read_text())
 
 
 def q(sql: str) -> list[dict]:
@@ -113,63 +192,65 @@ def explain(kind: str, ident: str) -> JSONResponse:
     # The regex allows dots/spaces, so reject ".." segments explicitly.
     if not re.fullmatch(r"[A-Za-z0-9_ .-]+", ident) or ".." in ident:
         raise HTTPException(400, "bad ident")
-    baked = DATA / f"explain_{kind}_{ident}.json"
-    if baked.exists():
-        return JSONResponse(json.loads(baked.read_text()))
+    obj = _baked(DATA / f"explain_{kind}_{ident}.json", _json_file)
+    if obj is not _MISSING:
+        return JSONResponse(obj)
     return JSONResponse(do_explain(kind, ident, data_dir=DATA))
 
 
 @app.get("/litmine")
 def litmine() -> JSONResponse:
     """Litmine loop ticker: papers -> chunks -> YES -> edges."""
-    f = DATA / "litmine_ticker.json"
-    if not f.exists():
+    obj = _baked(DATA / "litmine_ticker.json", _json_file)
+    if obj is _MISSING:
         raise HTTPException(503, "litmine ticker not exported yet")
-    return JSONResponse(json.loads(f.read_text()))
+    return JSONResponse(obj)
 
 
 @app.get("/metrics")
 def metrics() -> JSONResponse:
     """Baked run metrics: CV AUC, edge counts, model-cascade cost."""
-    f = DATA / "metrics.json"
-    if not f.exists():
+    obj = _baked(DATA / "metrics.json", _json_file)
+    if obj is _MISSING:
         raise HTTPException(503, "metrics not exported yet")
-    return JSONResponse(json.loads(f.read_text()))
+    return JSONResponse(obj)
 
 
 @app.get("/we-called-it")
 def we_called_it() -> JSONResponse:
     """Frozen prospective predictions: top unlabeled species by p_host,
     dated; confirmed when a post-freeze PMID names the species."""
-    baked = DATA / "we_called_it.json"
-    if not baked.exists():
+    obj = _baked(DATA / "we_called_it.json", _json_file)
+    if obj is _MISSING:
         raise HTTPException(503, "predictions not frozen yet")
-    return JSONResponse(json.loads(baked.read_text()))
+    return JSONResponse(obj)
+
+
+def _decisions_payload(f: Path) -> dict:
+    import pandas as pd
+    d = pd.read_csv(f).astype(object).where(pd.notna, None)
+    return {"rows": d.to_dict("records"),
+            "counts": d["decision"].value_counts().to_dict(),
+            "switches": int((d["switch_to"].fillna("none") != "none").sum()),
+            "refit_queue": "data/refit_queue.csv"}
 
 
 @app.get("/decisions")
 def decisions() -> JSONResponse:
     """Campaign decision delta: per-species accept/flag_review/drop +
     the executable switch_to column (drives the refit queue)."""
-    f = DATA / "decisions_delta.csv"
-    if not f.exists():
+    obj = _baked(DATA / "decisions_delta.csv", _decisions_payload)
+    if obj is _MISSING:
         raise HTTPException(503, "decision delta not exported yet")
-    import pandas as pd
-    d = pd.read_csv(f).astype(object).where(pd.notna, None)
-    return JSONResponse({
-        "rows": d.to_dict("records"),
-        "counts": d["decision"].value_counts().to_dict(),
-        "switches": int((d["switch_to"].fillna("none") != "none").sum()),
-        "refit_queue": "data/refit_queue.csv",
-    })
+    return JSONResponse(obj)
 
 
 @app.get("/briefing")
 def briefing() -> JSONResponse:
     """System-2 nightly digest via muse-wonder (see agent/briefing.py)."""
-    baked = DATA / "briefing.json"
-    if baked.exists():
-        return JSONResponse(json.loads(baked.read_text()))
+    obj = _baked(DATA / "briefing.json", _json_file)
+    if obj is not _MISSING:
+        return JSONResponse(obj)
     from agent.briefing import briefing as do_brief
 
     return JSONResponse(do_brief(data_dir=DATA))
@@ -178,4 +259,4 @@ def briefing() -> JSONResponse:
 STATIC = Path(os.environ.get("STATIC_DIR",
                              Path(__file__).resolve().parent.parent / "app"))
 if STATIC.exists():
-    app.mount("/", StaticFiles(directory=STATIC, html=True), name="app")
+    app.mount("/", _Precompressed(directory=STATIC, html=True), name="app")

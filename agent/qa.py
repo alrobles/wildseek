@@ -119,7 +119,7 @@ def _brain(man: dict | None) -> list[dict]:
              "Manifiesto de la corrida nocturna:\n"
              + json.dumps(man, default=str)[:4000]}],
             model=MODEL_AGENT, max_tokens=300)
-        j = json.loads(r["content"].strip().strip("`")
+        j = json.loads((r["content"] or "").strip().strip("`")
                        .removeprefix("json").strip())
         return [{"name": "brain review", "ok": bool(j["approve"]),
                  "value": j.get("reason", "")[:200]}]
