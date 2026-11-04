@@ -476,20 +476,6 @@ async function load() {
     }
   });
 
-  // Sparkline generator for detections
-  let sparklineDrawn = false;
-  if (map) map.on("data", e => {
-    if (e.sourceId === "det" && e.isSourceLoaded && !sparklineDrawn) {
-      try {
-        const feats = map.querySourceFeatures("det");
-        if (feats && feats.length > 0) {
-          sparklineDrawn = true;
-          renderDetSparkline(feats);
-        }
-      } catch(err) {}
-    }
-  });
-
   // 3. Parallel fetch of all panel data cards via Promise.allSettled
   Promise.allSettled([
     // Watershed watchlist
@@ -741,6 +727,7 @@ async function load() {
       layout:{visibility:"visible"},
       paint:{"raster-opacity":0.6}}, "ctyFill");
   }
+  let sparklineDrawn = false;
   function ensureDet() {
     if (!map || map.getSource("det")) return;
     map.addSource("det", {type:"geojson", data: SRC+"detections.geojson"});
@@ -751,6 +738,15 @@ async function load() {
     map.setFilter("detPt", ["<=",["get","year"],["to-number", yr]]);
     map.on("mousemove", "detPt", () => { map.getCanvas().style.cursor = "pointer"; });
     map.on("mouseleave", "detPt", () => { map.getCanvas().style.cursor = ""; });
+    // Year-trend sparkline counts the payload itself — exact and immune to
+    // partially parsed source tiles; the URL was just fetched by the source,
+    // so this resolves from the HTTP cache.
+    if (!sparklineDrawn) {
+      sparklineDrawn = true;
+      fetch(SRC+"detections.geojson").then(r => r.json())
+        .then(g => renderDetSparkline(g.features || []))
+        .catch(() => { sparklineDrawn = false; });
+    }
   }
   function ensureFlock() {
     if (!map || map.getSource("flock")) return;
@@ -1066,7 +1062,13 @@ async function explainWatershed(huc, statesStr) {
     });
     if (map && bounds) {
       try {
-        map.fitBounds([[bounds[0], bounds[1]], [bounds[2], bounds[3]]], {padding: 40, maxZoom: 8, duration: REDUCED_MOTION ? 0 : 1200});
+        // Panel-aware padding keeps the fitted bounds clear of the side
+        // panel (desktop) / top sheet (mobile) and the footer strip.
+        const pr = document.getElementById("panel").getBoundingClientRect();
+        const pad = window.innerWidth <= 600
+          ? {top: Math.round(pr.bottom) + 12, right: 28, bottom: 56, left: 28}
+          : {top: 48, right: 48, bottom: 64, left: Math.round(pr.right) + 20};
+        map.fitBounds([[bounds[0], bounds[1]], [bounds[2], bounds[3]]], {padding: pad, maxZoom: 8, duration: REDUCED_MOTION ? 0 : 1200});
       } catch(e) {}
     }
   }
